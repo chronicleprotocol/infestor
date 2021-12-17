@@ -7,23 +7,52 @@ It offers a simple way to mock exchange API responses and test your code.
 ## Example:
 
 ```go
-package yourpack
+package example
 
 import (
+	"os/exec"
+	"strings"
+	"testing"
+
+	"github.com/chronicleprotocol/infestor/origin"
+
 	"github.com/chronicleprotocol/infestor"
 	"github.com/chronicleprotocol/infestor/smocker"
+
+	"github.com/stretchr/testify/require"
 )
 
-api := smocker.NewApi("http://localhost", 8081)
+func callSetzer(params ...string) (string, error) {
+	out, err := exec.Command("setzer", params...).Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
 
-err := infestor.NewMocksBuilder()
-    .Reset()
-    .Add(origin.NewExchange("binance").WithSymbol("ETHBTC").WithPrice(1))
-    .Add(origin.NewExchange("kraken").WithSymbol("ETHBTC").WithPrice(2))
-    .Deploy(api)
+func TestETHBTC(t *testing.T) {
+	api := smocker.API{
+		Host: "http://172.17.0.2",
+		Port: 8081,
+	}
 
-if err != nil {
-	// ... Didn't able to send required mocks for smoker
+	err := infestor.NewMocksBuilder().
+		Reset().
+		Add(origin.NewExchange("binance").WithSymbol("ETH/BTC").WithPrice(1)).
+		Add(origin.NewExchange("bitfinex").WithSymbol("ETH/BTC").WithPrice(1)).
+		Add(origin.NewExchange("coinbase").WithSymbol("ETH/BTC").WithPrice(1)).
+		Add(origin.NewExchange("huobi").WithSymbol("ETH/BTC").WithPrice(1)).
+		Add(origin.NewExchange("poloniex").WithSymbol("ETH/BTC").WithPrice(1)).
+		Add(origin.NewExchange("kraken").WithSymbol("XETH/XXBT").WithPrice(1)).
+		Deploy(api)
+
+	// Build your test further
+	require.NoError(t, err)
+
+	out, err := callSetzer("price", "ethbtc")
+
+	require.NoError(t, err)
+	require.Equal(t, "0.5000000000", out)
 }
 
 // Run your tests with base URL `http://localhost:8080` for your exchanges
