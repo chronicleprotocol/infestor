@@ -2,6 +2,8 @@
 Library for writing integration tests based for different exchanges.
 It offers a simple way to mock exchange API responses and test your code.
 
+![Infestor logo!](/infestor.png "Infestor")
+
 ## Example:
 
 ```go
