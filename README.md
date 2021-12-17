@@ -19,7 +19,7 @@ api := smocker.NewApi("http://localhost", 8081)
 err := infestor.NewMocksBuilder()
     .Reset()
     .Add(origin.NewExchange("binance").WithSymbol("ETHBTC").WithPrice(1))
-    .Add(infestor.NewExchange("kraken").WithSymbol("ETHBTC").WithPrice(2))
+    .Add(origin.NewExchange("kraken").WithSymbol("ETHBTC").WithPrice(2))
     .Deploy(api)
 
 if err != nil {
