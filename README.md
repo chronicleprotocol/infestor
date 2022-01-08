@@ -1,3 +1,5 @@
+[![Run Tests](https://github.com/chronicleprotocol/infestor/actions/workflows/lint_test.yml/badge.svg)](https://github.com/chronicleprotocol/infestor/actions/workflows/lint_test.yml)
+
 # Infestor
 Library for writing integration tests based for different exchanges.
 It offers a simple way to mock exchange API responses and test your code.

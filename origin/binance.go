@@ -6,7 +6,11 @@ import (
 
 type Binance struct{}
 
-func (b Binance) BuildMock(e Exchange) ([]byte, error) {
+func (b Binance) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, b.build)
+}
+
+func (b Binance) build(e ExchangeMock) ([]byte, error) {
 	yaml := `
 - request:
     method: GET
@@ -14,14 +18,14 @@ func (b Binance) BuildMock(e Exchange) ([]byte, error) {
     query_params:
       symbol: "%s"
   response:
-	status: %d
+    status: %d
     headers:
-	  Content-Type: [application/json]
+      Content-Type: [application/json]
     body: |-
-	  {
-	    "symbol": "%s",
-	    "price": "%f"
-	  }`
+      {
+        "symbol": "%s",
+        "price": "%.8f"
+      }`
 	symbol := e.Symbol.Format("%s%s")
 	return []byte(fmt.Sprintf(yaml, symbol, e.StatusCode, symbol, e.Price)), nil
 }

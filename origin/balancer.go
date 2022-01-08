@@ -1,10 +1,21 @@
 package origin
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Balancer struct{}
 
-func (b Balancer) BuildMock(e Exchange) ([]byte, error) {
+func (b Balancer) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, b.build)
+}
+
+func (b Balancer) build(e ExchangeMock) ([]byte, error) {
+	contract, ok := e.Custom["contract"]
+	if !ok {
+		return nil, fmt.Errorf("`contract` custom field is requierd for balancer")
+	}
+
 	yaml := `
 - request:
     method: POST
@@ -21,11 +32,11 @@ func (b Balancer) BuildMock(e Exchange) ([]byte, error) {
               "tokenPrices": [
                   {
                       "poolLiquidity": "11224",
-                      "price": "%f",
+                      "price": "%.8f",
                       "symbol": "%s"
                   }
               ]
           }
       }`
-	return []byte(fmt.Sprintf(yaml, e.Symbol.Format("%s%s"), e.StatusCode, e.Price, e.Symbol.Base)), nil
+	return []byte(fmt.Sprintf(yaml, contract, e.StatusCode, e.Price, e.Symbol.Base)), nil
 }

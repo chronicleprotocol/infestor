@@ -45,3 +45,9 @@ jobs:
 
           # Optional: if set to true then the action don't cache or restore ~/.cache/go-build.
           # skip-build-cache: true
+      - name: Start Smocker instance for testing
+        run: docker run -d -p 8080:8080 -p 8081:8081 --name smocker thiht/smocker
+      - name: Run E2E Test
+        env:
+          SMOCKER_HOST: "http://localhost"
+        run: go test ./e2e

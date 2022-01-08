@@ -20,3 +20,9 @@
 
 # Output of the go coverage tool
 *.out
+
+# Debug mocks.yaml file.
+mocks.yaml
+
+# Setzer tests
+/setzer/

@@ -1,6 +1,7 @@
 package origin
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,15 +11,30 @@ import (
 // Mockable interface for exchange implementation.
 type Mockable interface {
 	// BuildMock builds yaml specification for exchange specific mock
-	BuildMock(e Exchange) ([]byte, error)
+	BuildMock(e []ExchangeMock) ([]byte, error)
+}
+
+type MockableFunc func(e ExchangeMock) ([]byte, error)
+
+// CombineMocks is helper function that helps most of exchanges to build mocks.
+func CombineMocks(e []ExchangeMock, f MockableFunc) ([]byte, error) {
+	var result bytes.Buffer
+	for _, mock := range e {
+		m, err := f(mock)
+		if err != nil {
+			return nil, err
+		}
+		result.Write(m)
+	}
+	return result.Bytes(), nil
 }
 
 var exchanges = map[string]Mockable{
 	"balancer":      Balancer{},
 	"binance":       Binance{},
 	"bitfinex":      Bitfinex{},
-	"butthumb":      Bithumb{},
-	"buthumb":       Bithumb{},
+	"bitthumb":      Bithumb{},
+	"bithumb":       Bithumb{},
 	"bitstamp":      BitStamp{},
 	"bittrex":       BitTrex{},
 	"coinbase":      Coinbase{},
@@ -60,7 +76,7 @@ func (p Symbol) Format(format string) string {
 	return fmt.Sprintf(format, p.Base, p.Quote)
 }
 
-type Exchange struct {
+type ExchangeMock struct {
 	Name       string
 	StatusCode int
 	Symbol     Symbol
@@ -69,51 +85,62 @@ type Exchange struct {
 	Ask        float64
 	Bid        float64
 	Timestamp  time.Time
+	Custom     map[string]string
 }
 
-func NewExchange(name string) *Exchange {
-	return &Exchange{StatusCode: http.StatusOK, Name: name}
+func NewExchange(name string) *ExchangeMock {
+	return &ExchangeMock{
+		StatusCode: http.StatusOK,
+		Name:       name,
+		Timestamp:  time.Now(),
+		Custom:     make(map[string]string),
+	}
 }
 
-func (e *Exchange) WithStatusCode(statusCode int) *Exchange {
+func (e *ExchangeMock) WithStatusCode(statusCode int) *ExchangeMock {
 	e.StatusCode = statusCode
 	return e
 }
 
-func (e *Exchange) WithSymbol(symbol string) *Exchange {
+func (e *ExchangeMock) WithSymbol(symbol string) *ExchangeMock {
 	e.Symbol = NewSymbol(symbol)
 	return e
 }
 
-func (e *Exchange) WithPrice(price float64) *Exchange {
+func (e *ExchangeMock) WithPrice(price float64) *ExchangeMock {
 	e.Price = price
 	return e
 }
 
-func (e *Exchange) WithVolume(volume float64) *Exchange {
+func (e *ExchangeMock) WithVolume(volume float64) *ExchangeMock {
 	e.Volume = volume
 	return e
 }
 
-func (e *Exchange) WithAsk(ask float64) *Exchange {
+func (e *ExchangeMock) WithAsk(ask float64) *ExchangeMock {
 	e.Ask = ask
 	return e
 }
 
-func (e *Exchange) WithBid(bid float64) *Exchange {
+func (e *ExchangeMock) WithBid(bid float64) *ExchangeMock {
 	e.Bid = bid
 	return e
 }
 
-func (e *Exchange) WithTime(timestamp time.Time) *Exchange {
+func (e *ExchangeMock) WithTime(timestamp time.Time) *ExchangeMock {
 	e.Timestamp = timestamp
 	return e
 }
 
-func BuildMock(e Exchange) ([]byte, error) {
-	ex, ok := exchanges[e.Name]
+func (e *ExchangeMock) WithCustom(key, value string) *ExchangeMock {
+	e.Custom[key] = value
+	return e
+}
+
+func BuildMock(exchangeName string, e []ExchangeMock) ([]byte, error) {
+	ex, ok := exchanges[exchangeName]
 	if !ok {
-		return nil, fmt.Errorf("failed to find exchange name %s", e.Name)
+		return nil, fmt.Errorf("failed to find exchange name %s", exchangeName)
 	}
 	return ex.BuildMock(e)
 }

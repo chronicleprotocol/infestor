@@ -1,37 +1,65 @@
 package origin
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+	"strings"
+)
 
 type Poloniex struct{}
 
-func (b Poloniex) BuildMock(e Exchange) ([]byte, error) {
+func (p Poloniex) BuildMock(e []ExchangeMock) ([]byte, error) {
 	yaml := `
 - request:
     method: GET
     path: '/public'
     query_params:
       command: 'returnTicker'
-  dynamic_response:
-    engine: go_template
-    script: >
-      headers:
-        Content-Type: [application/json]
-      body: >
-        {
-          "%s": {
-            "id": 148,
-            "last": "%f",
-            "lowestAsk": "%f",
-            "highestBid": "%f",
-            "percentChange": "0.01131570",
-            "baseVolume": "%f",
-            "quoteVolume": "1087.92098487",
-            "isFrozen": "0",
-            "postOnly": "0",
-            "marginTradingEnabled": "1",
-            "high24hr": "0.08840000",
-            "low24hr": "0.08626057"
-          }
+  response:
+    status: %d
+    headers:
+      Content-Type: [application/json]
+    body: |-
+      {
+        %s
+      }`
+	status := http.StatusOK
+	if len(e) > 0 {
+		status = e[0].StatusCode
+	}
+	return []byte(fmt.Sprintf(yaml, status, p.build(e))), nil
+}
+
+func (p Poloniex) build(mocks []ExchangeMock) string {
+	var result []string
+	yaml := `
+        "%s": {
+          "last": "%.8f",
+          "lowestAsk": "%.8f",
+          "highestBid": "%.8f",
+          "baseVolume": "%.8f"
         }`
-	return []byte(fmt.Sprintf(yaml, e.Symbol.Format("%s%s"), e.Price, e.Ask, e.Bid, e.Volume)), nil
+	for _, e := range p.filter(mocks) {
+		result = append(
+			result,
+			fmt.Sprintf(
+				yaml,
+				fmt.Sprintf("%s_%s", e.Symbol.Quote, e.Symbol.Base),
+				e.Price,
+				e.Ask,
+				e.Bid,
+				e.Volume,
+			),
+		)
+	}
+	return strings.Join(result, ",")
+}
+
+// removes duplicated pairs from list, otherwise it will cause issues
+func (p Poloniex) filter(mocks []ExchangeMock) map[string]ExchangeMock {
+	filtered := map[string]ExchangeMock{}
+	for _, e := range mocks {
+		filtered[e.Symbol.String()] = e
+	}
+	return filtered
 }

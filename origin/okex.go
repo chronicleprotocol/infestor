@@ -6,7 +6,11 @@ import (
 
 type Okex struct{}
 
-func (o Okex) BuildMock(e Exchange) ([]byte, error) {
+func (o Okex) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, o.build)
+}
+
+func (o Okex) build(e ExchangeMock) ([]byte, error) {
 	yaml := `
 - request:
     method: GET
@@ -17,25 +21,16 @@ func (o Okex) BuildMock(e Exchange) ([]byte, error) {
       Content-Type: application/json
     body: |-
       {
-				"best_ask": "%f",
-				"best_bid": "%f",
-				"instrument_id": "%s",
-				"open_utc0": "0.08309",
-				"open_utc8": "0.08406",
-				"product_id": "%s",
-				"last": "%f",
-				"last_qty": "0.350759",
-				"ask": "%f",
-				"best_ask_size": "2.981467",
-				"bid": "%f",
-				"best_bid_size": "5.389945",
-				"open_24h": "0.08262",
-				"high_24h": "0.08481",
-				"low_24h": "0.08209",
-				"base_volume_24h": "%f",
-				"timestamp": "%s",
-				"quote_volume_24h": "575.58243"
-			}`
+        "best_ask": "%f",
+        "best_bid": "%f",
+        "instrument_id": "%s",
+        "product_id": "%s",
+        "last": "%f",
+        "ask": "%f",
+        "bid": "%f",
+        "base_volume_24h": "%f",
+        "timestamp": "%s"
+      }`
 
 	symbol := e.Symbol.Format("%s-%s")
 	return []byte(fmt.Sprintf(

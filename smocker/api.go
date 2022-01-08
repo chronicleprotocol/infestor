@@ -19,7 +19,7 @@ func NewAPI(host string, port int) *API {
 	}
 }
 
-func (a *API) basePath() string {
+func (a *API) apiURL() string {
 	return a.Host + ":" + strconv.Itoa(a.Port)
 }
 
@@ -27,7 +27,7 @@ func (a *API) basePath() string {
 func (a *API) Reset(ctx context.Context) error {
 	request := Request{
 		Method:  Post,
-		BaseURL: fmt.Sprintf("%s/reset", a.basePath()),
+		BaseURL: fmt.Sprintf("%s/reset?force=true", a.apiURL()),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -47,7 +47,7 @@ func (a *API) Reset(ctx context.Context) error {
 func (a *API) AddMock(ctx context.Context, mock Mock) error {
 	request := Request{
 		Method:  Post,
-		BaseURL: fmt.Sprintf("%s/mocks", a.basePath()),
+		BaseURL: fmt.Sprintf("%s/mocks", a.apiURL()),
 		Headers: map[string]string{
 			"Content-Type": "application/x-yaml",
 		},
@@ -58,7 +58,7 @@ func (a *API) AddMock(ctx context.Context, mock Mock) error {
 		return err
 	}
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("reset failed: %s", res.Body)
+		return fmt.Errorf("failed to add mocks: %s", res.Body)
 	}
 	return nil
 }

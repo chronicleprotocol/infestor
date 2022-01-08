@@ -6,7 +6,11 @@ import (
 
 type HitBTC struct{}
 
-func (h HitBTC) BuildMock(e Exchange) ([]byte, error) {
+func (h HitBTC) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, h.build)
+}
+
+func (h HitBTC) build(e ExchangeMock) ([]byte, error) {
 	yaml := `
 - request:
     method: GET
@@ -17,17 +21,13 @@ func (h HitBTC) BuildMock(e Exchange) ([]byte, error) {
       Content-Type: application/json
     body: |-
       {
-				"symbol": "%s",
-				"ask": "%f",
-				"bid": "%f",
-				"last": "%f",
-				"low": "0.082113",
-				"high": "0.084802",
-				"open": "0.082663",
-				"volume": "%f",
-				"volumeQuote": "2054.2598378881",
-				"timestamp": "%s"
-			}`
+        "symbol": "%s",
+        "ask": "%f",
+        "bid": "%f",
+        "last": "%f",
+        "volume": "%f",
+        "timestamp": "%s"
+      }`
 
 	symbol := e.Symbol.Format("%s%s")
 	return []byte(fmt.Sprintf(

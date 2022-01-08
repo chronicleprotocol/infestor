@@ -7,7 +7,11 @@ import (
 
 type Gemini struct{}
 
-func (g Gemini) BuildMock(e Exchange) ([]byte, error) {
+func (g Gemini) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, g.build)
+}
+
+func (g Gemini) build(e ExchangeMock) ([]byte, error) {
 	yaml := `
 - request:
     method: GET
@@ -18,15 +22,15 @@ func (g Gemini) BuildMock(e Exchange) ([]byte, error) {
       Content-Type: application/json
     body: |-
       {
-				"bid": "%f",
-				"ask": "%f",
-				"volume": {
-					"ETH": "%f",
-					"BTC": "30.42238188324",
-					"timestamp": %d
-				},
-				"last": "%f"
-			}`
+        "bid": "%f",
+        "ask": "%f",
+        "volume": {
+          "ETH": "%f",
+          "BTC": "30.42238188324",
+          "timestamp": %d
+        },
+        "last": "%f"
+      }`
 
 	symbol := strings.ToLower(e.Symbol.Format("%s%s"))
 	return []byte(fmt.Sprintf(

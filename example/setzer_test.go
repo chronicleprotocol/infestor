@@ -23,7 +23,7 @@ func callSetzer(params ...string) (string, error) {
 
 func TestETHBTC(t *testing.T) {
 	api := smocker.API{
-		Host: "http://172.17.0.2",
+		Host: "http://smocker",
 		Port: 8081,
 	}
 
@@ -43,5 +43,5 @@ func TestETHBTC(t *testing.T) {
 	out, err := callSetzer("price", "ethbtc")
 
 	require.NoError(t, err)
-	require.Equal(t, "0.5000000000", out)
+	require.Equal(t, "1.0000000000", out)
 }

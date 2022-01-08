@@ -4,9 +4,16 @@ import (
 	"fmt"
 )
 
+// NOTE: For symbols of 4 chars you have to write `SYMBOL:` otherwise API request to smocker will fail.
+// Example: AVAX/USD should be written in mock as `AVAX:/USD`
+
 type Bitfinex struct{}
 
-func (b Bitfinex) BuildMock(e Exchange) ([]byte, error) {
+func (b Bitfinex) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, b.build)
+}
+
+func (b Bitfinex) build(e ExchangeMock) ([]byte, error) {
 	yaml := `
 - request:
     method: GET

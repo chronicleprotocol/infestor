@@ -7,27 +7,27 @@ import (
 
 type BitStamp struct{}
 
-func (b BitStamp) BuildMock(e Exchange) ([]byte, error) {
+func (b BitStamp) BuildMock(e []ExchangeMock) ([]byte, error) {
+	return CombineMocks(e, b.build)
+}
+
+func (b BitStamp) build(e ExchangeMock) ([]byte, error) {
 	yaml := `
-	- request:
-			method: GET
-			path: '/api/v2/ticker/%s'
-	  response:
-			status: %d
-			headers:
-				Content-Type: [application/json]
-			body: |-
-				{
-					"high": "0.08234246",
-					"last": "%f",
-					"timestamp": "%d",
-					"bid": "%f",
-					"vwap": "0.08262116",
-					"volume": "%f",
-					"low": "0.07913291",
-					"ask": "%f",
-					"open": "0.08234246"
-				}`
+- request:
+    method: GET
+    path: '/api/v2/ticker/%s'
+  response:
+    status: %d
+    headers:
+      Content-Type: [application/json]
+    body: |-
+      {
+        "last": "%f",
+        "timestamp": "%d",
+        "bid": "%f",
+        "volume": "%f",
+        "ask": "%f"
+      }`
 
 	return []byte(fmt.Sprintf(
 		yaml,
