@@ -2,6 +2,7 @@ package origin
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/chronicleprotocol/infestor/smocker"
 )
@@ -13,6 +14,7 @@ func (b BitStamp) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b BitStamp) build(e ExchangeMock) (*smocker.Mock, error) {
+	symbol := strings.ToLower(e.Symbol.Format("%s%s"))
 	body := `{
 	"last": "%f",
 	"timestamp": "%d",
@@ -24,7 +26,7 @@ func (b BitStamp) build(e ExchangeMock) (*smocker.Mock, error) {
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
 			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/v2/ticker/%s", e.Symbol.Format("%s%s"))),
+			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/v2/ticker/%s", symbol)),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,

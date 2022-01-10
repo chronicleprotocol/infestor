@@ -234,7 +234,7 @@ func (s *ExchangesE2ESuite) TestBitStamp() {
 	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/api/v2/ticker/ETHBTC", s.url)
+	url := fmt.Sprintf("%s/api/v2/ticker/ethbtc", s.url)
 	resp, err := http.Get(url)
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
