@@ -595,7 +595,7 @@ func (s *ExchangesE2ESuite) TestHuobi() {
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	var response struct {
-		Ts   int64
+		TS   int64 `json:"ts"`
 		Tick struct {
 			Vol float64
 			Bid []float64
@@ -606,7 +606,7 @@ func (s *ExchangesE2ESuite) TestHuobi() {
 	err = parseBody(resp, &response)
 
 	s.Require().NoError(err)
-	s.Require().Equal(ts.UnixMilli(), response.Ts)
+	s.Require().Equal(ts.UnixMilli(), response.TS)
 	s.Require().Equal(float64(2), response.Tick.Bid[0])
 	s.Require().Equal(float64(3), response.Tick.Ask[0])
 	s.Require().Equal(float64(4), response.Tick.Vol)
