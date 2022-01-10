@@ -1,7 +1,6 @@
 package infestor
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -51,21 +50,24 @@ func (mb *MocksBuilder) Add(e *origin.ExchangeMock) *MocksBuilder {
 
 func (mb *MocksBuilder) Deploy(api smocker.API) error {
 	ctx := context.Background()
-	var yaml bytes.Buffer
+	var result []*smocker.Mock
 	for name, mocks := range mb.mocks {
-		part, err := origin.BuildMock(name, mocks)
+		part, err := origin.BuildMocksForExchanges(name, mocks)
 		if err != nil {
 			return err
 		}
-		yaml.Write(part)
-		yaml.WriteString("\n")
+		result = append(result, part...)
 	}
-	mock := smocker.Mock{
-		Body: yaml.Bytes(),
+	mock := smocker.OriginMock{
+		Mocks: result,
 	}
 
+	body, err := mock.Body()
+	if err != nil {
+		return fmt.Errorf("failed to build mocks body: %w", err)
+	}
 	if mb.debug {
-		err := os.WriteFile("./mocks.yaml", yaml.Bytes(), 0644) // nolint:gosec,gomnd
+		err := os.WriteFile("./mocks.json", body, 0644) // nolint:gosec,gomnd
 		if err != nil {
 			return fmt.Errorf("failed to write debug mocks.yaml: %w", err)
 		}

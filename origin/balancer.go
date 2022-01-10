@@ -2,41 +2,53 @@ package origin
 
 import (
 	"fmt"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 type Balancer struct{}
 
-func (b Balancer) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (b Balancer) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, b.build)
 }
 
-func (b Balancer) build(e ExchangeMock) ([]byte, error) {
+func (b Balancer) build(e ExchangeMock) (*smocker.Mock, error) {
 	contract, ok := e.Custom["contract"]
 	if !ok {
 		return nil, fmt.Errorf("`contract` custom field is requierd for balancer")
 	}
 
-	yaml := `
-- request:
-    method: POST
-    path: '/subgraphs/name/balancer-labs/balancer'
-    body:
-      variables.id: %s
-  response:
-    status: %d
-    headers:
-      Content-Type: application/json
-    body: |-
-      {
-          "data": {
-              "tokenPrices": [
-                  {
-                      "poolLiquidity": "11224",
-                      "price": "%.8f",
-                      "symbol": "%s"
-                  }
-              ]
-          }
-      }`
-	return []byte(fmt.Sprintf(yaml, contract, e.StatusCode, e.Price, e.Symbol.Base)), nil
+	bodyStr := `
+{
+	"data": {
+		"tokenPrices": [
+			{
+				"price": "%.8f",
+				"symbol": "%s"
+			}
+		]
+	}
+}`
+
+	mock := &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("POST"),
+			Path:   smocker.NewStringMatcher("/subgraphs/name/balancer-labs/balancer"),
+			Body: &smocker.BodyMatcher{
+				BodyJSON: map[string]smocker.StringMatcher{
+					"variables.id": smocker.NewStringMatcher(contract),
+				},
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(bodyStr, e.Price, e.Symbol.Base),
+		},
+	}
+	return mock, nil
 }

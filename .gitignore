@@ -23,6 +23,7 @@
 
 # Debug mocks.yaml file.
 mocks.yaml
+mocks.json
 
 # Setzer tests
 /setzer/

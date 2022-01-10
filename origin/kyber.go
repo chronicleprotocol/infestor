@@ -3,28 +3,35 @@ package origin
 import (
 	"fmt"
 	"strings"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 type Kyber struct{}
 
-func (k Kyber) BuildMock(e []ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/change24h'
-  response:
-    status: %d
-    headers:
-      Content-Type: [application/json]
-    body: |-
-      {
-        %s
-      }`
+func (k Kyber) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	status := 200
 	if len(e) > 0 {
 		status = e[0].StatusCode
 	}
-	return []byte(fmt.Sprintf(yaml, status, k.build(e))), nil
+
+	return []*smocker.Mock{
+		{
+			Request: smocker.MockRequest{
+				Method: smocker.NewStringMatcher("GET"),
+				Path:   smocker.NewStringMatcher("/change24h"),
+			},
+			Response: &smocker.MockResponse{
+				Status: status,
+				Headers: map[string]smocker.StringSlice{
+					"Content-Type": []string{
+						"application/json",
+					},
+				},
+				Body: fmt.Sprintf("{%s}", k.build(e)),
+			},
+		},
+	}, nil
 }
 
 func (k Kyber) build(mocks []ExchangeMock) string {

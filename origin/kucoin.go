@@ -2,48 +2,46 @@ package origin
 
 import (
 	"fmt"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 type KuCoin struct{}
 
-func (k KuCoin) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (k KuCoin) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, k.build)
 }
 
-func (k KuCoin) build(e ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/api/v1/market/orderbook/level1'
-    query_params:
-      symbol: %s
-  response:
-    status: %d
-    headers:
-      Content-Type: application/json
-    body: |-
-      {
-        "code": "200000",
-        "data": {
-          "time": %d,
-          "sequence": "1615098154456",
-          "price": "%f",
-          "size": "0.0036768",
-          "bestBid": "%f",
-          "bestBidSize": "7.4758085",
-          "bestAsk": "%f",
-          "bestAskSize": "5.5416409"
-        }
-      }`
-
+func (k KuCoin) build(e ExchangeMock) (*smocker.Mock, error) {
 	symbol := e.Symbol.Format("%s-%s")
-	return []byte(fmt.Sprintf(
-		yaml,
-		symbol,
-		e.StatusCode,
-		e.Timestamp.UnixMilli(),
-		e.Price,
-		e.Bid,
-		e.Ask,
-	)), nil
+	body := `{
+	 "code": "200000",
+	 "data": {
+		 "time": %d,
+		 "price": "%f",
+		 "bestBid": "%f",
+		 "bestAsk": "%f"
+	 }
+ }`
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher("/api/v1/market/orderbook/level1"),
+			QueryParams: map[string]smocker.StringMatcherSlice{
+				"symbol": []smocker.StringMatcher{
+					smocker.NewStringMatcher(symbol),
+				},
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(body, e.Timestamp.UnixMilli(), e.Price, e.Bid, e.Ask),
+		},
+	}, nil
 }

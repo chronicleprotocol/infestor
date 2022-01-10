@@ -66,7 +66,7 @@ func (s *ExchangesE2ESuite) TestBalancer() {
 	// With contract
 	contract := "0xba100000625a3754423978a60c9317c58a424e3d"
 	ex = ex.WithCustom("contract", contract)
-	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
 	url := fmt.Sprintf("%s/subgraphs/name/balancer-labs/balancer", s.url)
@@ -137,6 +137,633 @@ func (s *ExchangesE2ESuite) TestBinance() {
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
+func (s *ExchangesE2ESuite) TestBitfinex() {
+	ex := origin.NewExchange("bitfinex").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithAsk(2).
+		WithBid(3).
+		WithVolume(4)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/v2/ticker/tETHBTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response []float64
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Len(response, 10)
+	s.Require().Equal(float64(3), response[0])
+	s.Require().Equal(float64(2), response[2])
+	s.Require().Equal(float64(1), response[6])
+	s.Require().Equal(float64(4), response[7])
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestBithumb() {
+	ts := time.Now()
+	ex := origin.NewExchange("bitthumb").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithVolume(2).
+		WithTime(ts)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/openapi/v1/spot/ticker?symbol=ETH-BTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := struct {
+		Data []struct {
+			Vol string
+			C   string
+			S   string
+		}
+		Timestamp int64
+	}{}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Len(response.Data, 1)
+	s.Require().Equal("ETH-BTC", response.Data[0].S)
+	s.Require().Equal("1.000000", response.Data[0].C)
+	s.Require().Equal("2.000000", response.Data[0].Vol)
+	s.Require().Equal(ts.UnixMilli(), response.Timestamp)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestBitStamp() {
+	ts := time.Now()
+	ex := origin.NewExchange("bitstamp").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithVolume(2).
+		WithBid(3).
+		WithAsk(4).
+		WithTime(ts)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/api/v2/ticker/ETHBTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := struct {
+		Last      string
+		Bid       string
+		Ask       string
+		Volume    string
+		Timestamp string
+	}{}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal("1.000000", response.Last)
+	s.Require().Equal("2.000000", response.Volume)
+	s.Require().Equal("3.000000", response.Bid)
+	s.Require().Equal("4.000000", response.Ask)
+	s.Require().Equal(fmt.Sprintf("%d", ts.Unix()), response.Timestamp)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestBitTrex() {
+	ex := origin.NewExchange("bittrex").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/api/v1.1/public/getticker?market=BTC-ETH", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := struct {
+		Result struct {
+			Last float64
+			Bid  float64
+			Ask  float64
+		}
+	}{}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal(float64(1), response.Result.Last)
+	s.Require().Equal(float64(2), response.Result.Bid)
+	s.Require().Equal(float64(3), response.Result.Ask)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestCoinbase() {
+	ts := time.Now()
+	format := "2006-01-02T15:04:05.999999Z"
+
+	ex := origin.NewExchange("coinbase").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithVolume(2).
+		WithBid(3).
+		WithAsk(4).
+		WithTime(ts)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/products/ETH-BTC/ticker", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := struct {
+		Price  string
+		Bid    string
+		Ask    string
+		Volume string
+		Time   string
+	}{}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal("1.000000", response.Price)
+	s.Require().Equal("2.000000", response.Volume)
+	s.Require().Equal("3.000000", response.Bid)
+	s.Require().Equal("4.000000", response.Ask)
+	s.Require().Equal(ts.Format(format), response.Time)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestCryptoCompare() {
+	ex := origin.NewExchange("cryptocompare").
+		WithSymbol("ETH/BTC").
+		WithPrice(1)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/data/price?fsym=ETH&tsyms=BTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := map[string]float64{}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Len(response, 1)
+	s.Require().Equal(float64(1), response["BTC"])
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestFtx() {
+	ex := origin.NewExchange("ftx").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/api/markets/ETH/BTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := struct {
+		Result struct {
+			Name          string
+			Last          float64
+			Bid           float64
+			Ask           float64
+			Price         float64
+			BaseCurrency  string
+			QuoteCurrency string
+			Volume        float64 `json:"volumeUsd24h"`
+		}
+	}{}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal(float64(1), response.Result.Last)
+	s.Require().Equal(float64(1), response.Result.Price)
+	s.Require().Equal(float64(2), response.Result.Bid)
+	s.Require().Equal(float64(3), response.Result.Ask)
+	s.Require().Equal(float64(4), response.Result.Volume)
+	s.Require().Equal("ETH", response.Result.BaseCurrency)
+	s.Require().Equal("BTC", response.Result.QuoteCurrency)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestGateIO() {
+	ex := origin.NewExchange("gateio").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/api/v4/spot/tickers?currency_pair=ETH_BTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response []struct {
+		Pair   string `json:"currency_pair"`
+		Last   string
+		Bid    string `json:"highest_bid"`
+		Ask    string `json:"lowest_ask"`
+		Volume string `json:"base_volume"`
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Len(response, 1)
+	s.Require().Equal("1.000000", response[0].Last)
+	s.Require().Equal("2.000000", response[0].Bid)
+	s.Require().Equal("3.000000", response[0].Ask)
+	s.Require().Equal("4.000000", response[0].Volume)
+	s.Require().Equal("ETH_BTC", response[0].Pair)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestGemini() {
+	ex := origin.NewExchange("gemini").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/v1/pubticker/ETHBTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response struct {
+		Last string
+		Bid  string
+		Ask  string
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal("1.000000", response.Last)
+	s.Require().Equal("2.000000", response.Bid)
+	s.Require().Equal("3.000000", response.Ask)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestHitBTC() {
+	ex := origin.NewExchange("hitbtc").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/api/2/public/ticker/ETHBTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response struct {
+		Symbol string
+		Last   string
+		Bid    string
+		Ask    string
+		Volume string
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal("ETHBTC", response.Symbol)
+	s.Require().Equal("1.000000", response.Last)
+	s.Require().Equal("2.000000", response.Bid)
+	s.Require().Equal("3.000000", response.Ask)
+	s.Require().Equal("4.000000", response.Volume)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestHuobi() {
+	ts := time.Now()
+	ex := origin.NewExchange("huobi").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4).
+		WithTime(ts)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/market/detail/merged?symbol=ethbtc", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response struct {
+		Ts   int64
+		Tick struct {
+			Vol float64
+			Bid []float64
+			Ask []float64
+		}
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal(ts.UnixMilli(), response.Ts)
+	s.Require().Equal(float64(2), response.Tick.Bid[0])
+	s.Require().Equal(float64(3), response.Tick.Ask[0])
+	s.Require().Equal(float64(4), response.Tick.Vol)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestKraken() {
+	ex := origin.NewExchange("kraken").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/0/public/Ticker?pair=ETHBTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response struct {
+		Result map[string]struct {
+			A []string
+			B []string
+			C []string
+			V []string
+		}
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Len(response.Result, 1)
+	s.Require().Equal("1.000000", response.Result["ETHBTC"].C[0])
+	s.Require().Equal("2.000000", response.Result["ETHBTC"].B[0])
+	s.Require().Equal("3.000000", response.Result["ETHBTC"].A[0])
+	s.Require().Equal("4.000000", response.Result["ETHBTC"].V[0])
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestKuCoin() {
+	ts := time.Now()
+	ex := origin.NewExchange("kucoin").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithTime(ts)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/api/v1/market/orderbook/level1?symbol=ETH-BTC", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response struct {
+		Data struct {
+			Time  int64
+			Price string
+			Ask   string `json:"bestAsk"`
+			Bid   string `json:"bestBid"`
+		}
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Equal("1.000000", response.Data.Price)
+	s.Require().Equal("2.000000", response.Data.Bid)
+	s.Require().Equal("3.000000", response.Data.Ask)
+	s.Require().Equal(ts.UnixMilli(), response.Data.Time)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestKyber() {
+	ts := time.Now()
+
+	err := infestor.NewMocksBuilder().
+		Debug().
+		Reset().
+		Add(origin.NewExchange("kyber").WithSymbol("ETH/BTC").WithPrice(1).WithTime(ts)).
+		Add(origin.NewExchange("kyber").WithSymbol("MKR/BTC").WithPrice(2).WithTime(ts)).
+		Deploy(s.api)
+
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/change24h", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	response := map[string]struct {
+		Timestamp   int64   `json:"timestamp"`
+		TokenSymbol string  `json:"token_symbol"`
+		Price       float64 `json:"rate_eth_now"`
+	}{}
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().NotNil(response["BTC_ETH"])
+	s.Require().Equal(ts.UnixMilli(), response["BTC_ETH"].Timestamp)
+	s.Require().Equal("ETH", response["BTC_ETH"].TokenSymbol)
+	s.Require().Equal(float64(1), response["BTC_ETH"].Price)
+	s.Require().NotNil(response["BTC_MKR"])
+	s.Require().Equal(ts.UnixMilli(), response["BTC_MKR"].Timestamp)
+	s.Require().Equal("MKR", response["BTC_MKR"].TokenSymbol)
+	s.Require().Equal(float64(2), response["BTC_MKR"].Price)
+
+	// Test status code
+	err = infestor.NewMocksBuilder().
+		Debug().
+		Reset().
+		Add(origin.NewExchange("kyber").WithSymbol("ETH/BTC").WithStatusCode(http.StatusNotFound)).
+		Deploy(s.api)
+
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
 func (s *ExchangesE2ESuite) TestPoloniex() {
 	err := infestor.NewMocksBuilder().
 		Reset().
@@ -184,47 +811,88 @@ func (s *ExchangesE2ESuite) TestPoloniex() {
 	s.Require().Equal(http.StatusConflict, resp.StatusCode)
 }
 
-func (s *ExchangesE2ESuite) TestKyber() {
+func (s *ExchangesE2ESuite) TestOkex() {
 	ts := time.Now()
+	ex := origin.NewExchange("okex").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithBid(2).
+		WithAsk(3).
+		WithVolume(4).
+		WithTime(ts)
 
-	err := infestor.NewMocksBuilder().
-		Debug().
-		Reset().
-		Add(origin.NewExchange("kyber").WithSymbol("ETH/BTC").WithPrice(1).WithTime(ts)).
-		Add(origin.NewExchange("kyber").WithSymbol("MKR/BTC").WithPrice(2).WithTime(ts)).
-		Deploy(s.api)
-
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/change24h", s.url)
+	url := fmt.Sprintf("%s/api/spot/v3/instruments/ETH-BTC/ticker", s.url)
 	resp, err := http.Get(url)
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
-	response := map[string]struct {
-		Timestamp   int64   `json:"timestamp"`
-		TokenSymbol string  `json:"token_symbol"`
-		Price       float64 `json:"rate_eth_now"`
-	}{}
+	var response struct {
+		Last      string
+		Ask       string
+		Bid       string
+		Volume    string `json:"base_volume_24h"`
+		Timestamp string
+	}
+
 	err = parseBody(resp, &response)
 
 	s.Require().NoError(err)
-	s.Require().NotNil(response["BTC_ETH"])
-	s.Require().Equal(ts.UnixMilli(), response["BTC_ETH"].Timestamp)
-	s.Require().Equal("ETH", response["BTC_ETH"].TokenSymbol)
-	s.Require().Equal(float64(1), response["BTC_ETH"].Price)
-	s.Require().NotNil(response["BTC_MKR"])
-	s.Require().Equal(ts.UnixMilli(), response["BTC_MKR"].Timestamp)
-	s.Require().Equal("MKR", response["BTC_MKR"].TokenSymbol)
-	s.Require().Equal(float64(2), response["BTC_MKR"].Price)
+	s.Require().Equal("1.000000", response.Last)
+	s.Require().Equal("2.000000", response.Bid)
+	s.Require().Equal("3.000000", response.Ask)
+	s.Require().Equal("4.000000", response.Volume)
+	s.Require().Equal(ts.String(), response.Timestamp)
 
 	// Test status code
-	err = infestor.NewMocksBuilder().
-		Debug().
-		Reset().
-		Add(origin.NewExchange("kyber").WithSymbol("ETH/BTC").WithStatusCode(http.StatusNotFound)).
-		Deploy(s.api)
+	ex = ex.WithStatusCode(http.StatusNotFound)
 
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Get(url)
+	s.Require().NoError(err)
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+}
+
+func (s *ExchangesE2ESuite) TestUpbit() {
+	ts := time.Now()
+	ex := origin.NewExchange("upbit").
+		WithSymbol("ETH/BTC").
+		WithPrice(1).
+		WithVolume(4).
+		WithTime(ts)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/v1/ticker?markets=BTC-ETH", s.url)
+	resp, err := http.Get(url)
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response []struct {
+		Market    string
+		Price     float64 `json:"trade_price"`
+		Volume    float64 `json:"trade_volume"`
+		Timestamp int64
+	}
+
+	err = parseBody(resp, &response)
+
+	s.Require().NoError(err)
+	s.Require().Len(response, 1)
+	s.Require().Equal(float64(1), response[0].Price)
+	s.Require().Equal(float64(4), response[0].Volume)
+	s.Require().Equal(ts.UnixMilli(), response[0].Timestamp)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
 	resp, err = http.Get(url)

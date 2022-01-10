@@ -156,6 +156,6 @@ func (c *Client) Reset() error {
 	return nil
 }
 
-func (c *Client) AddMock(mock Mock) error {
+func (c *Client) AddMock(mock OriginMock) error {
 	return nil
 }

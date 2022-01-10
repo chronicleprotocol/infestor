@@ -1,61 +1,55 @@
 package origin
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/chronicleprotocol/infestor/smocker"
+)
 
 type Ftx struct{}
 
-func (f Ftx) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (f Ftx) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, f.build)
 }
 
-func (f Ftx) build(e ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/api/markets/%s/%s'
-  response:
-    status: %d
-    headers:
-      Content-Type: application/json
-    body: |-
-      {
-        "success": true,
-        "result": {
-          "name": "%s",
-          "enabled": true,
-          "postOnly": false,
-          "priceIncrement": 2.5e-6,
-          "sizeIncrement": 0.001,
-          "minProvideSize": 0.001,
-          "last": %f,
-          "bid": %f,
-          "ask": %f,
-          "price": %f,
-          "type": "spot",
-          "baseCurrency": "%s",
-          "quoteCurrency": "%s",
-          "underlying": null,
-          "restricted": false,
-          "highLeverageFeeExempt": true,
-          "change1h": -0.0015453653897589824,
-          "change24h": 0.05481774512574174,
-          "changeBod": 0.01809090909090909,
-          "quoteVolume24h": 1351.9492182925,
-          "volumeUsd24h": %f
-        }
-      }`
-	return []byte(fmt.Sprintf(
-		yaml,
-		e.Symbol.Base,
-		e.Symbol.Quote,
-		e.StatusCode,
-		e.Symbol.String(),
-		e.Price,
-		e.Bid,
-		e.Ask,
-		e.Price,
-		e.Symbol.Base,
-		e.Symbol.Quote,
-		e.Volume,
-	)), nil
+func (f Ftx) build(e ExchangeMock) (*smocker.Mock, error) {
+	body := `{
+	       "success": true,
+	       "result": {
+	         "name": "%s",
+	         "last": %f,
+	         "bid": %f,
+	         "ask": %f,
+	         "price": %f,
+	         "type": "spot",
+	         "baseCurrency": "%s",
+	         "quoteCurrency": "%s",
+	         "volumeUsd24h": %f
+	       }
+	     }`
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/markets/%s/%s", e.Symbol.Base, e.Symbol.Quote)),
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(
+				body,
+				e.Symbol.String(),
+				e.Price,
+				e.Bid,
+				e.Ask,
+				e.Price,
+				e.Symbol.Base,
+				e.Symbol.Quote,
+				e.Volume),
+		},
+	}, nil
 }

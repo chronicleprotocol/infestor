@@ -1,42 +1,41 @@
 package origin
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/chronicleprotocol/infestor/smocker"
+)
 
 type Coinbase struct{}
 
-func (c Coinbase) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (c Coinbase) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, c.build)
 }
 
-func (c Coinbase) build(e ExchangeMock) ([]byte, error) {
+func (c Coinbase) build(e ExchangeMock) (*smocker.Mock, error) {
 	format := "2006-01-02T15:04:05.999999Z"
 
-	yaml := `
-- request:
-    method: GET
-    path: '/products/%s/ticker'
-  response:
-    status: %d
-    headers:
-      Content-Type: [application/json]
-    body: |-
-      {
-        "price": "%f",
-        "time": "%s",
-        "bid": "%f",
-        "ask": "%f",
-        "volume": "%f"
-      }`
-	return []byte(
-		fmt.Sprintf(
-			yaml,
-			e.Symbol.Format("%s-%s"),
-			e.StatusCode,
-			e.Price,
-			e.Timestamp.Format(format),
-			e.Bid,
-			e.Ask,
-			e.Volume,
-		),
-	), nil
+	body := `{
+	"price": "%f",
+	"time": "%s",
+	"bid": "%f",
+	"ask": "%f",
+	"volume": "%f"
+}`
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher(fmt.Sprintf("/products/%s/ticker", e.Symbol.Format("%s-%s"))),
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(body, e.Price, e.Timestamp.Format(format), e.Bid, e.Ask, e.Volume),
+		},
+	}, nil
 }

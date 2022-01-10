@@ -2,48 +2,52 @@ package origin
 
 import (
 	"fmt"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 type Bithumb struct{}
 
-func (b Bithumb) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (b Bithumb) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, b.build)
 }
 
-func (b Bithumb) build(e ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/openapi/v1/spot/ticker'
-    query_params:
-      symbol: %s
-  response:
-    status: %d
-    headers:
-      Content-Type: [application/json]
-    body: |-
-      {
-        "data": [
-          {
-            "p": "0.068600",
-            "ver": "5218655",
-            "vol": "%f",
-            "c": "%f",
-            "s": "%s",
-            "t": "359.860172000000",
-            "v": "4439.616702",
-            "h": "0.710000",
-            "l": "0.068600"
-          }
-        ],
-        "code": "0",
-        "msg": "success",
-        "timestamp": %d,
-        "startTime": null
-      }`
-
+func (b Bithumb) build(e ExchangeMock) (*smocker.Mock, error) {
 	symbol := e.Symbol.Format("%s-%s")
-	return []byte(fmt.Sprintf(
-		yaml, symbol, e.StatusCode, e.Volume, e.Price, symbol, e.Timestamp.UnixMilli(),
-	)), nil
+	body := `
+{
+	"data": [
+		{
+			"vol": "%f",
+			"c": "%f",
+			"s": "%s"
+		}
+	],
+	"code": "0",
+	"msg": "success",
+	"timestamp": %d,
+	"startTime": null
+}
+`
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher("/openapi/v1/spot/ticker"),
+			QueryParams: map[string]smocker.StringMatcherSlice{
+				"symbol": []smocker.StringMatcher{
+					smocker.NewStringMatcher(symbol),
+				},
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(body, e.Volume, e.Price, symbol, e.Timestamp.UnixMilli()),
+		},
+	}, nil
 }

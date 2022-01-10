@@ -4,30 +4,39 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 type Poloniex struct{}
 
-func (p Poloniex) BuildMock(e []ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/public'
-    query_params:
-      command: 'returnTicker'
-  response:
-    status: %d
-    headers:
-      Content-Type: [application/json]
-    body: |-
-      {
-        %s
-      }`
+func (p Poloniex) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	status := http.StatusOK
 	if len(e) > 0 {
 		status = e[0].StatusCode
 	}
-	return []byte(fmt.Sprintf(yaml, status, p.build(e))), nil
+	return []*smocker.Mock{
+		{
+			Request: smocker.MockRequest{
+				Method: smocker.NewStringMatcher("GET"),
+				Path:   smocker.NewStringMatcher("/public"),
+				QueryParams: map[string]smocker.StringMatcherSlice{
+					"command": []smocker.StringMatcher{
+						smocker.NewStringMatcher("returnTicker"),
+					},
+				},
+			},
+			Response: &smocker.MockResponse{
+				Status: status,
+				Headers: map[string]smocker.StringSlice{
+					"Content-Type": []string{
+						"application/json",
+					},
+				},
+				Body: fmt.Sprintf("{%s}", p.build(e)),
+			},
+		},
+	}, nil
 }
 
 func (p Poloniex) build(mocks []ExchangeMock) string {

@@ -1,32 +1,33 @@
 package origin
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 // Mockable interface for exchange implementation.
 type Mockable interface {
-	// BuildMock builds yaml specification for exchange specific mock
-	BuildMock(e []ExchangeMock) ([]byte, error)
+	// BuildMocks builds yaml specification for exchange specific mock
+	BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error)
 }
 
-type MockableFunc func(e ExchangeMock) ([]byte, error)
+type MockableFunc func(e ExchangeMock) (*smocker.Mock, error)
 
 // CombineMocks is helper function that helps most of exchanges to build mocks.
-func CombineMocks(e []ExchangeMock, f MockableFunc) ([]byte, error) {
-	var result bytes.Buffer
-	for _, mock := range e {
-		m, err := f(mock)
+func CombineMocks(e []ExchangeMock, f MockableFunc) ([]*smocker.Mock, error) {
+	var mocks []*smocker.Mock
+	for _, ex := range e {
+		m, err := f(ex)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to build mock: %w", err)
 		}
-		result.Write(m)
+		mocks = append(mocks, m)
 	}
-	return result.Bytes(), nil
+	return mocks, nil
 }
 
 var exchanges = map[string]Mockable{
@@ -137,10 +138,20 @@ func (e *ExchangeMock) WithCustom(key, value string) *ExchangeMock {
 	return e
 }
 
-func BuildMock(exchangeName string, e []ExchangeMock) ([]byte, error) {
+func BuildMocksForExchanges(exchangeName string, e []ExchangeMock) ([]*smocker.Mock, error) {
 	ex, ok := exchanges[exchangeName]
 	if !ok {
 		return nil, fmt.Errorf("failed to find exchange name %s", exchangeName)
 	}
-	return ex.BuildMock(e)
+	mocks, err := ex.BuildMocks(e)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range mocks {
+		mErr := m.Validate()
+		if mErr != nil {
+			return nil, mErr
+		}
+	}
+	return mocks, nil
 }

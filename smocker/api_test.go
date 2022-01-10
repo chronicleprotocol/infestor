@@ -14,7 +14,7 @@ func TestResetAPICall(t *testing.T) {
 }
 
 func TestAddMock(t *testing.T) {
-	mock := Mock{
+	mock := OriginMock{
 		Body: []byte(`- request:
     method: POST
     path: '/subgraphs/name/balancer-labs/balancer'

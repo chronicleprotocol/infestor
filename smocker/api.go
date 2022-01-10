@@ -44,14 +44,19 @@ func (a *API) Reset(ctx context.Context) error {
 }
 
 // AddMock Add a mock to the mocks list.
-func (a *API) AddMock(ctx context.Context, mock Mock) error {
+func (a *API) AddMock(ctx context.Context, mock OriginMock) error {
+	body, err := mock.Body()
+	if err != nil {
+		return fmt.Errorf("failed to marshal mocks request: %w", err)
+	}
+
 	request := Request{
 		Method:  Post,
 		BaseURL: fmt.Sprintf("%s/mocks", a.apiURL()),
 		Headers: map[string]string{
-			"Content-Type": "application/x-yaml",
+			"Content-Type": "application/json",
 		},
-		Body: mock.Body,
+		Body: body,
 	}
 	res, err := SendWithContext(ctx, request)
 	if err != nil {

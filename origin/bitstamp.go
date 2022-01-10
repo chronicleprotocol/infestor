@@ -2,41 +2,38 @@ package origin
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 type BitStamp struct{}
 
-func (b BitStamp) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (b BitStamp) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, b.build)
 }
 
-func (b BitStamp) build(e ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/api/v2/ticker/%s'
-  response:
-    status: %d
-    headers:
-      Content-Type: [application/json]
-    body: |-
-      {
-        "last": "%f",
-        "timestamp": "%d",
-        "bid": "%f",
-        "volume": "%f",
-        "ask": "%f"
-      }`
+func (b BitStamp) build(e ExchangeMock) (*smocker.Mock, error) {
+	body := `{
+	"last": "%f",
+	"timestamp": "%d",
+	"bid": "%f",
+	"volume": "%f",
+	"ask": "%f"
+}`
 
-	return []byte(fmt.Sprintf(
-		yaml,
-		strings.ToLower(e.Symbol.Format("%s%s")),
-		e.StatusCode,
-		e.Price,
-		e.Timestamp.Unix(),
-		e.Bid,
-		e.Volume,
-		e.Ask,
-	)), nil
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/v2/ticker/%s", e.Symbol.Format("%s%s"))),
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(body, e.Price, e.Timestamp.Unix(), e.Bid, e.Volume, e.Ask),
+		},
+	}, nil
 }

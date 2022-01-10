@@ -1,48 +1,47 @@
 package origin
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/chronicleprotocol/infestor/smocker"
+)
 
 type GateIO struct{}
 
-func (g GateIO) BuildMock(e []ExchangeMock) ([]byte, error) {
+func (g GateIO) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return CombineMocks(e, g.build)
 }
 
-func (g GateIO) build(e ExchangeMock) ([]byte, error) {
-	yaml := `
-- request:
-    method: GET
-    path: '/api/v4/spot/tickers'
-    query_params:
-      currency_pair: %s
-  response:
-    status: %d
-    headers:
-      Content-Type: application/json
-    body: |-
-      [
-        {
-          "currency_pair": "%s",
-          "last": "%f",
-          "lowest_ask": "%f",
-          "highest_bid": "%f",
-          "change_percentage": "-0.62",
-          "base_volume": "%f",
-          "quote_volume": "36.88146210359657",
-          "high_24h": "0.084826",
-          "low_24h": "0.082033"
-        }
-      ]`
-
+func (g GateIO) build(e ExchangeMock) (*smocker.Mock, error) {
 	symbol := e.Symbol.Format("%s_%s")
-	return []byte(fmt.Sprintf(
-		yaml,
-		symbol,
-		e.StatusCode,
-		symbol,
-		e.Price,
-		e.Ask,
-		e.Bid,
-		e.Volume,
-	)), nil
+	body := `[
+	{
+		"currency_pair": "%s",
+		"last": "%f",
+		"lowest_ask": "%f",
+		"highest_bid": "%f",
+		"base_volume": "%f"
+	}
+]`
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher("/api/v4/spot/tickers"),
+			QueryParams: map[string]smocker.StringMatcherSlice{
+				"currency_pair": []smocker.StringMatcher{
+					smocker.NewStringMatcher(symbol),
+				},
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(body, symbol, e.Price, e.Ask, e.Bid, e.Volume),
+		},
+	}, nil
 }
