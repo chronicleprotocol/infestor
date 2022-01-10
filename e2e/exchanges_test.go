@@ -501,7 +501,7 @@ func (s *ExchangesE2ESuite) TestGemini() {
 	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/v1/pubticker/ETHBTC", s.url)
+	url := fmt.Sprintf("%s/v1/pubticker/ethbtc", s.url)
 	resp, err := http.Get(url)
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
