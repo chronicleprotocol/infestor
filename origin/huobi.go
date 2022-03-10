@@ -14,10 +14,62 @@ import (
 type Huobi struct{}
 
 func (h Huobi) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
-	return CombineMocks(e, h.build)
+	mocksOne, err := CombineMocks(e, h.buildForOne)
+	if err != nil {
+		return nil, err
+	}
+	tickers, err := CombineMocks(e, h.buildTickers)
+	if err != nil {
+		return nil, err
+	}
+	return append(mocksOne, tickers...), nil
 }
 
-func (h Huobi) build(e ExchangeMock) (*smocker.Mock, error) {
+func (h Huobi) buildTickers(e ExchangeMock) (*smocker.Mock, error) {
+	symbol := strings.ToLower(e.Symbol.Format("%s%s"))
+	price := e.Price
+	if e.Bid != 0 {
+		price = e.Bid
+	}
+	body := `{
+		"status": "ok",
+		"ts": %d,
+		"data": [
+			{
+				"symbol":"%s",
+				"open":%f,     
+				"high":%f,     
+				"low":%f,        
+				"close":%f,     
+				"amount":36551302.17544405,
+				"vol":%f,
+				"count":1709,
+				"bid":%f,
+				"bidSize":54300.341,
+				"ask":%f,
+				"askSize":1923.4879
+				}
+		]
+	}`
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.NewStringMatcher("GET"),
+			Path:   smocker.NewStringMatcher("/market/tickers"),
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(body, e.Timestamp.UnixMilli(), symbol, price, price, price, price, e.Volume, price, e.Ask),
+		},
+	}, nil
+}
+
+func (h Huobi) buildForOne(e ExchangeMock) (*smocker.Mock, error) {
 	symbol := strings.ToLower(e.Symbol.Format("%s%s"))
 	price := e.Price
 	if e.Bid != 0 {
