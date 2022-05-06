@@ -51,6 +51,9 @@ var exchanges = map[string]Mockable{
 	"okex":          Okex{},
 	"poloniex":      Poloniex{},
 	"upbit":         Upbit{},
+	"wsteth":        WSTETH{},
+	"balancerV2":    BalancerV2{},
+	"curve":         Curve{},
 }
 
 // Symbol represents an asset pair.
