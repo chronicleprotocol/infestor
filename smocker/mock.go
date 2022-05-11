@@ -88,3 +88,10 @@ func NewStringMatcher(value string) StringMatcher {
 		Value:   value,
 	}
 }
+
+func NewSubstringMatcher(value string) StringMatcher {
+	return StringMatcher{
+		Matcher: "ShouldContainSubstring",
+		Value:   value,
+	}
+}
