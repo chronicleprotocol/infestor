@@ -19,7 +19,6 @@ const rpcJSONResult = `{
 
 func (b WSTETH) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
-	fmt.Println(mocks)
 	m, err := CombineMocks(e, b.buildTokensPerStEth)
 	if err != nil {
 		return nil, err

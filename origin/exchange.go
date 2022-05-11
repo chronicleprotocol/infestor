@@ -54,6 +54,7 @@ var exchanges = map[string]Mockable{
 	"wsteth":        WSTETH{},
 	"balancerV2":    BalancerV2{},
 	"curve":         Curve{},
+	"ethrpc":        EthRPC{},
 }
 
 // Symbol represents an asset pair.
