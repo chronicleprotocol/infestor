@@ -50,11 +50,11 @@ func (k Kraken) buildWithSlash(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/0/public/Ticker"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/0/public/Ticker"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"pair": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},
@@ -100,11 +100,11 @@ func (k Kraken) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/0/public/Ticker"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/0/public/Ticker"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"pair": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

@@ -28,8 +28,8 @@ func (g Gemini) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher(fmt.Sprintf("/v1/pubticker/%s", symbol)),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual(fmt.Sprintf("/v1/pubticker/%s", symbol)),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,

@@ -13,12 +13,12 @@ func (b EthRPC) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b EthRPC) build(e ExchangeMock) (*smocker.Mock, error) {
-	m := smocker.NewSubstringMatcher("eth_blockNumber")
+	m := smocker.ShouldContainSubstring("eth_blockNumber")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("POST"),
-			Path:   smocker.NewStringMatcher("/"),
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
 			Body: &smocker.BodyMatcher{
 				BodyString: &m,
 			},

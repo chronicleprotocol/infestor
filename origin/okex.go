@@ -28,8 +28,8 @@ func (o Okex) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/spot/v3/instruments/%s/ticker", symbol)),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual(fmt.Sprintf("/api/spot/v3/instruments/%s/ticker", symbol)),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,

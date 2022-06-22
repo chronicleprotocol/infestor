@@ -18,8 +18,8 @@ func (k Kyber) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return []*smocker.Mock{
 		{
 			Request: smocker.MockRequest{
-				Method: smocker.NewStringMatcher("GET"),
-				Path:   smocker.NewStringMatcher("/change24h"),
+				Method: smocker.ShouldEqual("GET"),
+				Path:   smocker.ShouldEqual("/change24h"),
 			},
 			Response: &smocker.MockResponse{
 				Status: status,

@@ -30,8 +30,8 @@ func (f Ftx) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/markets/%s/%s", e.Symbol.Base, e.Symbol.Quote)),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual(fmt.Sprintf("/api/markets/%s/%s", e.Symbol.Base, e.Symbol.Quote)),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,

@@ -26,11 +26,11 @@ func (k KuCoin) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/api/v1/market/orderbook/level1"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/api/v1/market/orderbook/level1"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"symbol": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

@@ -25,8 +25,8 @@ func (h HitBTC) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher(fmt.Sprintf("/api/2/public/ticker/%s", symbol)),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual(fmt.Sprintf("/api/2/public/ticker/%s", symbol)),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,

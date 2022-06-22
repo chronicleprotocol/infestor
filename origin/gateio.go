@@ -26,11 +26,11 @@ func (g GateIO) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/api/v4/spot/tickers"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/api/v4/spot/tickers"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"currency_pair": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

@@ -25,8 +25,8 @@ func (c Coinbase) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher(fmt.Sprintf("/products/%s/ticker", e.Symbol.Format("%s-%s"))),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual(fmt.Sprintf("/products/%s/ticker", e.Symbol.Format("%s-%s"))),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,

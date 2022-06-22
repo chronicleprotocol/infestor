@@ -6,23 +6,10 @@ import (
 	"time"
 )
 
-// OriginMock struct that represents a mock request to smocker API.
-// - Reset: Optional (defaults to false), used to reset on Smocker before adding mocks.
-// - Session: Optional, the name of the new session to start.
-// - Body: Required, the yaml content of the mock.
-type OriginMock struct {
-	Reset   bool
-	Session string
-	Mocks   []*Mock
-}
-
-func (om *OriginMock) Body() ([]byte, error) {
-	return json.Marshal(om.Mocks)
-}
-
 type Mock struct {
 	Request  MockRequest   `json:"request,omitempty" yaml:"request"`
 	Response *MockResponse `json:"response,omitempty" yaml:"response,omitempty"`
+	Context  *MockContext  `json:"context,omitempty" yaml:"context,omitempty"`
 }
 
 func (bm *Mock) Validate() error {
@@ -81,17 +68,66 @@ type MockResponse struct {
 	Headers MapStringSlice `json:"headers,omitempty" yaml:"headers,omitempty"`
 }
 
-// NewStringMatcher helps to create matchers easy
-func NewStringMatcher(value string) StringMatcher {
-	return StringMatcher{
-		Matcher: "ShouldEqual",
-		Value:   value,
-	}
+type MockContext struct {
+	Times uint `json:"times" yaml:"times"`
 }
 
-func NewSubstringMatcher(value string) StringMatcher {
-	return StringMatcher{
-		Matcher: "ShouldContainSubstring",
-		Value:   value,
-	}
+func ShouldEqualJSON(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldEqualJSON", Value: value}
+}
+
+func ShouldEqual(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldEqual", Value: value}
+}
+
+func ShouldNotEqual(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotEqual", Value: value}
+}
+
+func ShouldResemble(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldResemble", Value: value}
+}
+
+func ShouldNotResemble(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotResemble", Value: value}
+}
+
+func ShouldContainSubstring(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldContainSubstring", Value: value}
+}
+
+func ShouldNotContainSubstring(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotContainSubstring", Value: value}
+}
+
+func ShouldStartWith(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldStartWith", Value: value}
+}
+
+func ShouldNotStartWith(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotStartWith", Value: value}
+}
+
+func ShouldEndWith(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldEndWith", Value: value}
+}
+
+func ShouldNotEndWith(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotEndWith", Value: value}
+}
+
+func ShouldMatch(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldMatch", Value: value}
+}
+
+func ShouldNotMatch(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotMatch", Value: value}
+}
+
+func ShouldBeEmpty(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldBeEmpty", Value: value}
+}
+
+func ShouldNotBeEmpty(value string) StringMatcher {
+	return StringMatcher{Matcher: "ShouldNotBeEmpty", Value: value}
 }

@@ -54,8 +54,8 @@ func (h Huobi) buildTickers(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/market/tickers"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/market/tickers"),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,
@@ -93,11 +93,11 @@ func (h Huobi) buildForOne(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/market/detail/merged"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/market/detail/merged"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"symbol": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

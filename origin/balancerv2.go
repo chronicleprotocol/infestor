@@ -16,12 +16,12 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b BalancerV2) build(e ExchangeMock) (*smocker.Mock, error) {
-	m := smocker.NewSubstringMatcher("0x32296969ef14eb0c6d29669c550d4a0449130230")
+	m := smocker.ShouldContainSubstring("0x32296969ef14eb0c6d29669c550d4a0449130230")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("POST"),
-			Path:   smocker.NewStringMatcher("/"),
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
 			Body: &smocker.BodyMatcher{
 				BodyString: &m,
 			},
