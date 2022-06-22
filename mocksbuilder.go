@@ -2,6 +2,7 @@ package infestor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -58,11 +59,8 @@ func (mb *MocksBuilder) Deploy(api smocker.API) error {
 		}
 		result = append(result, part...)
 	}
-	mock := smocker.OriginMock{
-		Mocks: result,
-	}
 
-	body, err := mock.Body()
+	body, err := json.Marshal(result)
 	if err != nil {
 		return fmt.Errorf("failed to build mocks body: %w", err)
 	}
@@ -85,5 +83,5 @@ func (mb *MocksBuilder) Deploy(api smocker.API) error {
 		return nil
 	}
 
-	return api.AddMock(ctx, mock)
+	return api.AddMocks(ctx, result)
 }
