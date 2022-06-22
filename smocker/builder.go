@@ -31,8 +31,22 @@ func (mb *MockBuilder) SetRequestMethod(method StringMatcher) *MockBuilder {
 	return mb
 }
 
-func (mb *MockBuilder) SetRequestBody(body BodyMatcher) *MockBuilder {
-	mb.mock.Request.Body = &body
+func (mb *MockBuilder) SetRequestBodyString(body StringMatcher) *MockBuilder {
+	if mb.mock.Request.Body == nil {
+		mb.mock.Request.Body = &BodyMatcher{}
+	}
+	mb.mock.Request.Body.BodyString = &body
+	return mb
+}
+
+func (mb *MockBuilder) AddRequestBodyJSON(key string, body StringMatcher) *MockBuilder {
+	if mb.mock.Request.Body == nil {
+		mb.mock.Request.Body = &BodyMatcher{}
+	}
+	if mb.mock.Request.Body.BodyJSON == nil {
+		mb.mock.Request.Body.BodyJSON = make(map[string]StringMatcher)
+	}
+	mb.mock.Request.Body.BodyJSON[key] = body
 	return mb
 }
 
