@@ -15,8 +15,9 @@ import (
 
 	"github.com/chronicleprotocol/infestor"
 
-	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 func parseBody(resp *http.Response, r interface{}) error {
@@ -44,10 +45,7 @@ func (s *ExchangesE2ESuite) SetupSuite() {
 	smockerHost, exist := os.LookupEnv("SMOCKER_HOST")
 	s.Require().True(exist, "SMOCKER_HOST env variable have to be set")
 
-	s.api = smocker.API{
-		Host: smockerHost,
-		Port: 8081,
-	}
+	s.api = smocker.API{URL: smockerHost + ":8081"}
 
 	s.url = fmt.Sprintf("%s:8080", smockerHost)
 }
