@@ -26,8 +26,8 @@ func (b Binance) buildWholeDay(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/api/v3/ticker/24hr"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/api/v3/ticker/24hr"),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,
@@ -47,11 +47,11 @@ func (b Binance) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/api/v3/ticker/price"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/api/v3/ticker/price"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"symbol": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

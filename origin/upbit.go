@@ -28,11 +28,11 @@ func (u Upbit) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/v1/ticker"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/v1/ticker"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"markets": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

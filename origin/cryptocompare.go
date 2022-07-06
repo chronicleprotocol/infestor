@@ -17,14 +17,14 @@ func (c CryptoCompare) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/data/price"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/data/price"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"fsym": []smocker.StringMatcher{
-					smocker.NewStringMatcher(e.Symbol.Base),
+					smocker.ShouldEqual(e.Symbol.Base),
 				},
 				"tsyms": []smocker.StringMatcher{
-					smocker.NewStringMatcher(e.Symbol.Quote),
+					smocker.ShouldEqual(e.Symbol.Quote),
 				},
 			},
 		},

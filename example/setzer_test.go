@@ -22,10 +22,7 @@ func callSetzer(params ...string) (string, error) {
 }
 
 func TestETHBTC(t *testing.T) {
-	api := smocker.API{
-		Host: "http://smocker",
-		Port: 8081,
-	}
+	api := smocker.API{URL: "http://smocker:8081"}
 
 	err := infestor.NewMocksBuilder().
 		Reset().

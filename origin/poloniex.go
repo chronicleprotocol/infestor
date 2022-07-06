@@ -18,11 +18,11 @@ func (p Poloniex) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return []*smocker.Mock{
 		{
 			Request: smocker.MockRequest{
-				Method: smocker.NewStringMatcher("GET"),
-				Path:   smocker.NewStringMatcher("/public"),
+				Method: smocker.ShouldEqual("GET"),
+				Path:   smocker.ShouldEqual("/public"),
 				QueryParams: map[string]smocker.StringMatcherSlice{
 					"command": []smocker.StringMatcher{
-						smocker.NewStringMatcher("returnTicker"),
+						smocker.ShouldEqual("returnTicker"),
 					},
 				},
 			},

@@ -26,11 +26,11 @@ func (b BitTrex) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/api/v1.1/public/getticker"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/api/v1.1/public/getticker"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"market": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

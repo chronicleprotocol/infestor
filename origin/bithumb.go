@@ -32,11 +32,11 @@ func (b Bithumb) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("GET"),
-			Path:   smocker.NewStringMatcher("/openapi/v1/spot/ticker"),
+			Method: smocker.ShouldEqual("GET"),
+			Path:   smocker.ShouldEqual("/openapi/v1/spot/ticker"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"symbol": []smocker.StringMatcher{
-					smocker.NewStringMatcher(symbol),
+					smocker.ShouldEqual(symbol),
 				},
 			},
 		},

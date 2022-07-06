@@ -2,32 +2,24 @@ package smocker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 )
 
 type API struct {
-	Host string
-	Port int
+	URL string
 }
 
-func NewAPI(host string, port int) *API {
-	return &API{
-		Host: host,
-		Port: port,
-	}
-}
-
-func (a *API) apiURL() string {
-	return a.Host + ":" + strconv.Itoa(a.Port)
+func NewAPI(url string) *API {
+	return &API{URL: url}
 }
 
 // Reset Clear the mocks and the history of calls.
 func (a *API) Reset(ctx context.Context) error {
 	request := Request{
 		Method:  Post,
-		BaseURL: fmt.Sprintf("%s/reset?force=true", a.apiURL()),
+		BaseURL: fmt.Sprintf("%s/reset?force=true", a.URL),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -43,16 +35,15 @@ func (a *API) Reset(ctx context.Context) error {
 	return nil
 }
 
-// AddMock Add a mock to the mocks list.
-func (a *API) AddMock(ctx context.Context, mock OriginMock) error {
-	body, err := mock.Body()
+// AddMocks Add a mock to the mocks list.
+func (a *API) AddMocks(ctx context.Context, mock []*Mock) error {
+	body, err := json.Marshal(mock)
 	if err != nil {
 		return fmt.Errorf("failed to marshal mocks request: %w", err)
 	}
-
 	request := Request{
 		Method:  Post,
-		BaseURL: fmt.Sprintf("%s/mocks", a.apiURL()),
+		BaseURL: fmt.Sprintf("%s/mocks", a.URL),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},

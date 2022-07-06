@@ -32,11 +32,11 @@ func (b Balancer) build(e ExchangeMock) (*smocker.Mock, error) {
 
 	mock := &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("POST"),
-			Path:   smocker.NewStringMatcher("/subgraphs/name/balancer-labs/balancer"),
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/subgraphs/name/balancer-labs/balancer"),
 			Body: &smocker.BodyMatcher{
 				BodyJSON: map[string]smocker.StringMatcher{
-					"variables.id": smocker.NewStringMatcher(contract),
+					"variables.id": smocker.ShouldEqual(contract),
 				},
 			},
 		},

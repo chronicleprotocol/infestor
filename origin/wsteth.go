@@ -36,12 +36,12 @@ func (b WSTETH) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 
 func (b WSTETH) buildTokensPerStEth(e ExchangeMock) (*smocker.Mock, error) {
 	// tokensPerStEth
-	m := smocker.NewSubstringMatcher("0x9576a0c8")
+	m := smocker.ShouldContainSubstring("0x9576a0c8")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("POST"),
-			Path:   smocker.NewStringMatcher("/"),
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
 			Body: &smocker.BodyMatcher{
 				BodyString: &m,
 			},
@@ -60,12 +60,12 @@ func (b WSTETH) buildTokensPerStEth(e ExchangeMock) (*smocker.Mock, error) {
 
 func (b WSTETH) buildstEthPerToken(e ExchangeMock) (*smocker.Mock, error) {
 	// stEthPerToken
-	m := smocker.NewSubstringMatcher("0x035faf82")
+	m := smocker.ShouldContainSubstring("0x035faf82")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
-			Method: smocker.NewStringMatcher("POST"),
-			Path:   smocker.NewStringMatcher("/"),
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
 			Body: &smocker.BodyMatcher{
 				BodyString: &m,
 			},
