@@ -26,6 +26,7 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) {
+	// getExchangeRate
 	m := smocker.ShouldContainSubstring("0xe6aa216c")
 
 	return &smocker.Mock{
@@ -49,6 +50,7 @@ func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) 
 }
 
 func (b RocketPool) buildGetRethValue(e ExchangeMock) (*smocker.Mock, error) {
+	// getRethValue(uint256)
 	m := smocker.ShouldContainSubstring("0x4346f03e")
 
 	return &smocker.Mock{
