@@ -13,19 +13,14 @@ type BalancerV2 struct{}
 
 func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
-	m, err := CombineMocks(e, b.buildStethWeth)
+
+	m, err := CombineMocks(e, b.buildGetPriceRateCache)
 	if err != nil {
 		return nil, err
 	}
 	mocks = append(mocks, m...)
 
-	m, err = CombineMocks(e, b.buildRethWeth)
-	if err != nil {
-		return nil, err
-	}
-	mocks = append(mocks, m...)
-
-	m, err = CombineMocks(e, b.buildRethWethRef)
+	m, err = CombineMocks(e, b.buildGetLatest)
 	if err != nil {
 		return nil, err
 	}
@@ -34,9 +29,9 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-// "Ref:RETH/WETH": "0xae78736Cd615f374D3085123A210448E74Fc6393",
-func (b BalancerV2) buildRethWethRef(e ExchangeMock) (*smocker.Mock, error) {
-	m := smocker.ShouldContainSubstring("0xae78736Cd615f374D3085123A210448E74Fc6393")
+func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
+	// getLatest(uint256)
+	m := smocker.ShouldContainSubstring("0xb10be739")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
@@ -58,33 +53,9 @@ func (b BalancerV2) buildRethWethRef(e ExchangeMock) (*smocker.Mock, error) {
 	}, nil
 }
 
-// "RETH/WETH": "0x1E19CF2D73a72Ef1332C882F20534B6519Be0276",
-func (b BalancerV2) buildRethWeth(e ExchangeMock) (*smocker.Mock, error) {
-	m := smocker.ShouldContainSubstring("0x1E19CF2D73a72Ef1332C882F20534B6519Be0276")
-
-	return &smocker.Mock{
-		Request: smocker.MockRequest{
-			Method: smocker.ShouldEqual("POST"),
-			Path:   smocker.ShouldEqual("/"),
-			Body: &smocker.BodyMatcher{
-				BodyString: &m,
-			},
-		},
-		Response: &smocker.MockResponse{
-			Status: e.StatusCode,
-			Headers: map[string]smocker.StringSlice{
-				"Content-Type": []string{
-					"application/json",
-				},
-			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"),
-		},
-	}, nil
-}
-
-// "STETH/WETH": "0x32296969ef14eb0c6d29669c550d4a0449130230",
-func (b BalancerV2) buildStethWeth(e ExchangeMock) (*smocker.Mock, error) {
-	m := smocker.ShouldContainSubstring("0x32296969ef14eb0c6d29669c550d4a0449130230")
+func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
+	// getPriceRateCache(uint256,uint256,uint256)
+	m := smocker.ShouldContainSubstring("0xb867ee5a")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{

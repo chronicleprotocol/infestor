@@ -25,9 +25,19 @@ func (b Curve) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	}
 	mocks = append(mocks, m...)
 
+	m, err = CombineMocks(e, b.buildDY)
+	if err != nil {
+		return nil, err
+	}
+	mocks = append(mocks, m...)
+
 	return mocks, nil
 }
 
+func (b Curve) buildDY(e ExchangeMock) (*smocker.Mock, error) {
+	// get_dy(int128,int128,uint256)
+	return b.build(e, smocker.ShouldContainSubstring("0x5e0d443f"))
+}
 func (b Curve) buildNoChecksum(e ExchangeMock) (*smocker.Mock, error) {
 	return b.build(e, smocker.ShouldContainSubstring("0xdc24316b9ae028f1497c275eb9192a3ea0f67022"))
 }
