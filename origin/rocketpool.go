@@ -1,26 +1,22 @@
 package origin
 
-// Simulate an ETHRPC node returning the price for STETH/ETH on BalancerV2
-// https://etherscan.io/address/0x32296969ef14eb0c6d29669c550d4a0449130230#code
-
 import (
 	"fmt"
 
 	"github.com/chronicleprotocol/infestor/smocker"
 )
 
-type BalancerV2 struct{}
+type RocketPool struct{}
 
-func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
+func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
-
-	m, err := CombineMocks(e, b.buildGetPriceRateCache)
+	m, err := CombineMocks(e, b.buildGetExchangeRate)
 	if err != nil {
 		return nil, err
 	}
 	mocks = append(mocks, m...)
 
-	m, err = CombineMocks(e, b.buildGetLatest)
+	m, err = CombineMocks(e, b.buildGetRethValue)
 	if err != nil {
 		return nil, err
 	}
@@ -29,9 +25,9 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
-	// getLatest(uint256)
-	m := smocker.ShouldContainSubstring("0xb10be739")
+func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) {
+	// getExchangeRate
+	m := smocker.ShouldContainSubstring("0xe6aa216c")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
@@ -48,14 +44,14 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"),
+			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"),
 		},
 	}, nil
 }
 
-func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
-	// getPriceRateCache(uint256,uint256,uint256)
-	m := smocker.ShouldContainSubstring("0xb867ee5a")
+func (b RocketPool) buildGetRethValue(e ExchangeMock) (*smocker.Mock, error) {
+	// getRethValue(uint256)
+	m := smocker.ShouldContainSubstring("0x4346f03e")
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
@@ -72,7 +68,7 @@ func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"),
+			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"),
 		},
 	}, nil
 }

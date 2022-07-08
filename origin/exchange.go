@@ -31,6 +31,7 @@ func CombineMocks(e []ExchangeMock, f MockableFunc) ([]*smocker.Mock, error) {
 }
 
 var exchanges = map[string]Mockable{
+	"rocketpool":    RocketPool{},
 	"balancer":      Balancer{},
 	"binance":       Binance{},
 	"bitfinex":      Bitfinex{},
