@@ -30,7 +30,6 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
-
 	price, ok := e.Custom["price"]
 	if !ok {
 		return nil, fmt.Errorf("`price` custom field is requierd for balancerV2")
