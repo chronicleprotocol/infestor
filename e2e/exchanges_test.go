@@ -124,7 +124,7 @@ func (s *ExchangesE2ESuite) TestBalancerV2_getLatest() {
 
 	url := fmt.Sprintf("%s/", s.url)
 	reqJSON := `{"method":"eth_call","params":[{"from":null,"to":"0x0000000000000000000000000000000000000000","data":"0xb10be7390000000000000000000000000000000000000000000000000000000000000000"}, "latest"],"id":1,"jsonrpc":"2.0"}`
-	jsonStr := []byte(fmt.Sprintf(reqJSON))
+	jsonStr := []byte(fmt.Sprint(reqJSON))
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
@@ -160,7 +160,7 @@ func (s *ExchangesE2ESuite) TestBalancerV2_getPriceRateCache() {
 
 	url := fmt.Sprintf("%s/", s.url)
 	reqJSON := `{"method":"eth_call","params":[{"from":null,"to":"0x0000000000000000000000000000000000000000","data":"0xb867ee5a"}, "latest"],"id":1,"jsonrpc":"2.0"}`
-	jsonStr := []byte(fmt.Sprintf(reqJSON))
+	jsonStr := []byte(fmt.Sprint(reqJSON))
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
