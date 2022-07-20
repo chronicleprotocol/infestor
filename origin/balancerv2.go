@@ -30,6 +30,11 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
+	price, ok := e.Custom["price"]
+	if !ok {
+		return nil, fmt.Errorf("`price` custom field is requierd for balancerV2")
+	}
+
 	// getLatest(uint256)
 	m := smocker.ShouldContainSubstring("0xb10be739")
 
@@ -48,12 +53,17 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"),
+			Body: fmt.Sprintf(rpcJSONResult, price),
 		},
 	}, nil
 }
 
 func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
+	rate, ok := e.Custom["rate"]
+	if !ok {
+		return nil, fmt.Errorf("`rate` custom field is requierd for balancerV2")
+	}
+
 	// getPriceRateCache(uint256,uint256,uint256)
 	m := smocker.ShouldContainSubstring("0xb867ee5a")
 
@@ -72,7 +82,7 @@ func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"),
+			Body: fmt.Sprintf(rpcJSONResult, rate),
 		},
 	}, nil
 }

@@ -41,6 +41,14 @@ type ExchangesE2ESuite struct {
 	url string
 }
 
+type jsonrpcMessage struct {
+	Version string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Method  string          `json:"method,omitempty"`
+	Params  json.RawMessage `json:"params,omitempty"`
+	Result  string          `json:"result,omitempty"`
+}
+
 func (s *ExchangesE2ESuite) SetupSuite() {
 	smockerHost, exist := os.LookupEnv("SMOCKER_HOST")
 	s.Require().True(exist, "SMOCKER_HOST env variable have to be set")
@@ -90,6 +98,79 @@ func (s *ExchangesE2ESuite) TestBalancer() {
 	s.Require().Len(response.Data.TokenPrices, 1)
 	s.Require().Equal("1.00000000", response.Data.TokenPrices[0].Price)
 	s.Require().Equal("BAL", response.Data.TokenPrices[0].Symbol)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
+func (s *ExchangesE2ESuite) TestBalancerV2_getLatest() {
+	ex := origin.NewExchange("balancerV2").WithSymbol("STETH/ETH").WithPrice(1)
+	// No `pool` field should fail
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	// With set rate and price
+	price := "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"
+	ex = ex.WithCustom("rate", price).WithCustom("price", price)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+	reqJSON := `{"method":"eth_call","params":[{"from":null,"to":"0x0000000000000000000000000000000000000000","data":"0xb10be7390000000000000000000000000000000000000000000000000000000000000000"}, "latest"],"id":1,"jsonrpc":"2.0"}`
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(price, response.Result)
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
+func (s *ExchangesE2ESuite) TestBalancerV2_getPriceRateCache() {
+	ex := origin.NewExchange("balancerV2").WithSymbol("STETH/ETH").WithPrice(1)
+	// No `pool` field should fail
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	// With set rate and price
+	rate := "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"
+	ex = ex.WithCustom("rate", rate).WithCustom("price", rate)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+	reqJSON := `{"method":"eth_call","params":[{"from":null,"to":"0x0000000000000000000000000000000000000000","data":"0xb867ee5a"}, "latest"],"id":1,"jsonrpc":"2.0"}`
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	fmt.Println(response.Result)
+	s.Require().Equal(rate, response.Result)
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
