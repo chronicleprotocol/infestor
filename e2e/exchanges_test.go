@@ -979,3 +979,17 @@ func (s *ExchangesE2ESuite) TestUpbit() {
 	defer func() { _ = resp.Body.Close() }()
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
+
+func (s *ExchangesE2ESuite) TestUniswapV3() {
+	ex := origin.NewExchange("uniswap_v3").WithPrice(1)
+
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/subgraphs/name/uniswap/uniswap-v3", s.url)
+	jsonStr := []byte(`{"match":"0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"}`)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	defer func() { _ = resp.Body.Close() }()
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+}
