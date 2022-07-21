@@ -38,6 +38,10 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) {
+	price := "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+	if e.Custom["price"] != "" {
+		price = e.Custom["price"]
+	}
 	// getExchangeRate
 	m := smocker.ShouldContainSubstring("0xe6aa216c")
 
@@ -56,7 +60,7 @@ func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) 
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"),
+			Body: fmt.Sprintf(rpcJSONResult, price),
 		},
 	}, nil
 }
