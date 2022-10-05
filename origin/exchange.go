@@ -34,6 +34,7 @@ var exchanges = map[string]Mockable{
 	"rocketpool":    RocketPool{},
 	"balancer":      Balancer{},
 	"binance":       Binance{},
+	"binance_us":    BinanceUS{},
 	"bitfinex":      Bitfinex{},
 	"bitthumb":      Bithumb{},
 	"bithumb":       Bithumb{},
