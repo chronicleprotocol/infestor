@@ -14,13 +14,27 @@ type BalancerV2 struct{}
 func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
 
-	m, err := CombineMocks(e, b.buildGetPriceRateCache)
-	if err != nil {
-		return nil, err
-	}
-	mocks = append(mocks, m...)
+	n := smocker.ShouldContainSubstring("net_version")
+	mocks = append(mocks, &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
+			Body: &smocker.BodyMatcher{
+				BodyString: &n,
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: 200,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"1\"}",
+		},
+	})
 
-	m, err = CombineMocks(e, b.buildGetLatest)
+	m, err := CombineMocks(e, b.build)
 	if err != nil {
 		return nil, err
 	}
@@ -29,15 +43,8 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
-	price, ok := e.Custom["price"]
-	if !ok {
-		return nil, fmt.Errorf("`price` custom field is requierd for balancerV2")
-	}
-
-	// getLatest(uint256)
-	m := smocker.ShouldContainSubstring("0xb10be739")
-
+func (b BalancerV2) build(e ExchangeMock) (*smocker.Mock, error) {
+	m := smocker.ShouldContainSubstring(e.Custom["match"])
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
 			Method: smocker.ShouldEqual("POST"),
@@ -53,36 +60,8 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, price),
-		},
-	}, nil
-}
-
-func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
-	rate, ok := e.Custom["rate"]
-	if !ok {
-		return nil, fmt.Errorf("`rate` custom field is requierd for balancerV2")
-	}
-
-	// getPriceRateCache(uint256,uint256,uint256)
-	m := smocker.ShouldContainSubstring("0xb867ee5a")
-
-	return &smocker.Mock{
-		Request: smocker.MockRequest{
-			Method: smocker.ShouldEqual("POST"),
-			Path:   smocker.ShouldEqual("/"),
-			Body: &smocker.BodyMatcher{
-				BodyString: &m,
-			},
-		},
-		Response: &smocker.MockResponse{
-			Status: e.StatusCode,
-			Headers: map[string]smocker.StringSlice{
-				"Content-Type": []string{
-					"application/json",
-				},
-			},
-			Body: fmt.Sprintf(rpcJSONResult, rate),
+			// Multicall response:
+			Body: fmt.Sprintf(rpcJSONResult, e.Custom["response"]),
 		},
 	}, nil
 }
