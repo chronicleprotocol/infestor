@@ -9,7 +9,7 @@ import (
 const defaultURI = "http://localhost:8081"
 
 func TestResetAPICall(t *testing.T) {
-	uri = defaultURI
+	uri := defaultURI
 	if os.Getenv("SMOCKER_HOST") != "" {
 		uri = os.Getenv("SMOCKER_HOST")
 	}
