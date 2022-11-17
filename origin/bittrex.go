@@ -14,7 +14,6 @@ func (b BitTrex) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 
 func (b BitTrex) build(e ExchangeMock) (*smocker.Mock, error) {
 	symbol := fmt.Sprintf("%s-%s", e.Symbol.Base, e.Symbol.Quote)
-	fmt.Printf("james symbol: %s\n\n\n", symbol)
 	body := `{
   "symbol": "%s",
   "lastTradeRate": "%f",
