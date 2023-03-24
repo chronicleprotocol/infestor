@@ -17,7 +17,7 @@ type Mockable interface {
 
 type MockableFunc func(e ExchangeMock) (*smocker.Mock, error)
 
-// CombineMocks is helper function that helps most of exchanges to build mocks.
+// CombineMocks is helper function that helps exchanges to build mocks.
 func CombineMocks(e []ExchangeMock, f MockableFunc) ([]*smocker.Mock, error) {
 	var mocks []*smocker.Mock
 	for _, ex := range e {
@@ -41,6 +41,7 @@ var exchanges = map[string]Mockable{
 	"bitstamp":      BitStamp{},
 	"bittrex":       BitTrex{},
 	"coinbase":      Coinbase{},
+	"coinbasepro":   Coinbase{},
 	"cryptocompare": CryptoCompare{},
 	"ftx":           Ftx{},
 	"gateio":        GateIO{},
