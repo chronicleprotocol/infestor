@@ -13,26 +13,18 @@ func (b BitTrex) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 }
 
 func (b BitTrex) build(e ExchangeMock) (*smocker.Mock, error) {
-	symbol := fmt.Sprintf("%s-%s", e.Symbol.Quote, e.Symbol.Base)
+	symbol := fmt.Sprintf("%s-%s", e.Symbol.Base, e.Symbol.Quote)
 	body := `{
-	 "success": true,
-	 "message": "",
-	 "result": {
-		 "Bid": %f,
-		 "Ask": %f,
-		 "Last": %f
-	 }
- }`
+  "symbol": "%s",
+  "lastTradeRate": "%f",
+  "bidRate": "%f",
+  "askRate": "%f"
+}`
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
 			Method: smocker.ShouldEqual("GET"),
-			Path:   smocker.ShouldEqual("/api/v1.1/public/getticker"),
-			QueryParams: map[string]smocker.StringMatcherSlice{
-				"market": []smocker.StringMatcher{
-					smocker.ShouldEqual(symbol),
-				},
-			},
+			Path:   smocker.ShouldEqual(fmt.Sprintf("/v3/markets/%s/ticker", symbol)),
 		},
 		Response: &smocker.MockResponse{
 			Status: e.StatusCode,
@@ -41,7 +33,7 @@ func (b BitTrex) build(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(body, e.Bid, e.Ask, e.Price),
+			Body: fmt.Sprintf(body, symbol, e.Price, e.Bid, e.Ask),
 		},
 	}, nil
 }
