@@ -34,6 +34,12 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 		},
 	})
 
+	m, err := CombineMocks(e, b.buildGetLatest)
+	if err != nil {
+		return nil, err
+	}
+	mocks = append(mocks, m)
+
 	m, err := CombineMocks(e, b.build)
 	if err != nil {
 		return nil, err
