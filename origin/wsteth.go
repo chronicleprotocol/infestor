@@ -5,21 +5,27 @@ package origin
 
 import (
 	"fmt"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/types"
+	"math/big"
 
 	"github.com/chronicleprotocol/infestor/smocker"
 )
 
-type WSTETH struct{}
+type WSTETH struct {
+	EthRPC
+}
 
 func (b WSTETH) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
-	m, err := CombineMocks(e, b.buildTokensPerStEth)
+
+	superMocks, err := b.EthRPC.BuildMocks(e)
 	if err != nil {
 		return nil, err
 	}
-	mocks = append(mocks, m...)
+	mocks = append(mocks, superMocks...)
 
-	m, err = CombineMocks(e, b.buildstEthPerToken)
+	m, err := CombineMocks(e, b.buildSTEthPerToken)
 	if err != nil {
 		return nil, err
 	}
@@ -28,9 +34,35 @@ func (b WSTETH) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b WSTETH) buildTokensPerStEth(e ExchangeMock) (*smocker.Mock, error) {
-	// tokensPerStEth
-	m := smocker.ShouldContainSubstring("0x9576a0c8")
+func (b WSTETH) buildSTEthPerToken(e ExchangeMock) (*smocker.Mock, error) {
+	blockNumber, err := e.Custom["blockNumber"].(int)
+	if !err {
+		return nil, fmt.Errorf("not found block number")
+	}
+	pool, err := e.Custom[e.Symbol.String()].(types.Address)
+	if !err {
+		return nil, fmt.Errorf("not found pool address")
+	}
+	funcData, ok := e.Custom["stEthPerToken"].([]FunctionData)
+	if !ok || len(funcData) < 1 {
+		return nil, fmt.Errorf("not found function data for stEthPerToken")
+	}
+
+	data, _ := stEthPerToken.EncodeArgs()
+	calls := []MultiCall{
+		{
+			Target: pool,
+			Data:   data,
+		},
+	}
+	args, _ := encodeMultiCallArgs(calls)
+	rate := funcData[0].Return[0].(*big.Int)
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(rate.Bytes()).PadLeft(32)})
+
+	fmt.Println("stEthPerToken, args", hexutil.BytesToHex(args))
+	fmt.Println("stEthPerToken, resp", hexutil.BytesToHex(resp))
+
+	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
@@ -47,31 +79,7 @@ func (b WSTETH) buildTokensPerStEth(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, "0x0000000000000000000000000000000000000000000000000cf6c97c561e07bc"),
-		},
-	}, nil
-}
-
-func (b WSTETH) buildstEthPerToken(e ExchangeMock) (*smocker.Mock, error) {
-	// stEthPerToken
-	m := smocker.ShouldContainSubstring("0x035faf82")
-
-	return &smocker.Mock{
-		Request: smocker.MockRequest{
-			Method: smocker.ShouldEqual("POST"),
-			Path:   smocker.ShouldEqual("/"),
-			Body: &smocker.BodyMatcher{
-				BodyString: &m,
-			},
-		},
-		Response: &smocker.MockResponse{
-			Status: e.StatusCode,
-			Headers: map[string]smocker.StringSlice{
-				"Content-Type": []string{
-					"application/json",
-				},
-			},
-			Body: fmt.Sprintf(RpcJSONResult, "0x0000000000000000000000000000000000000000000000000edb20f642b06506"),
+			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }

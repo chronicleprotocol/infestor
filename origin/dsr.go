@@ -2,18 +2,17 @@ package origin
 
 import (
 	"fmt"
+	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
 	"math/big"
-
-	"github.com/chronicleprotocol/infestor/smocker"
 )
 
-type RocketPool struct {
+type DSR struct {
 	EthRPC
 }
 
-func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
+func (b DSR) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
 
 	superMocks, err := b.EthRPC.BuildMocks(e)
@@ -22,7 +21,7 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	}
 	mocks = append(mocks, superMocks...)
 
-	m, err := CombineMocks(e, b.buildGetExchangeRate)
+	m, err := CombineMocks(e, b.buildDSR)
 	if err != nil {
 		return nil, err
 	}
@@ -31,24 +30,24 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) {
+func (b DSR) buildDSR(e ExchangeMock) (*smocker.Mock, error) {
 	blockNumber, err := e.Custom["blockNumber"].(int)
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pool, err := e.Custom[e.Symbol.String()].(types.Address)
+	pot, err := e.Custom[e.Symbol.String()].(types.Address)
 	if !err {
-		return nil, fmt.Errorf("not found pool address")
+		return nil, fmt.Errorf("not found pot address")
 	}
-	funcData, ok := e.Custom["getExchangeRate"].([]FunctionData)
+	funcData, ok := e.Custom["dsr"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
-		return nil, fmt.Errorf("not found function data for getExchangeRate")
+		return nil, fmt.Errorf("not found function data for dsr")
 	}
 
-	data, _ := getExchangeRate.EncodeArgs()
+	data, _ := dsr.EncodeArgs()
 	calls := []MultiCall{
 		{
-			Target: pool,
+			Target: pot,
 			Data:   data,
 		},
 	}
@@ -56,8 +55,8 @@ func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) 
 	rate := funcData[0].Return[0].(*big.Int)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(rate.Bytes()).PadLeft(32)})
 
-	fmt.Println("getExchangeRate, args", hexutil.BytesToHex(args))
-	fmt.Println("getExchangeRate, resp", hexutil.BytesToHex(resp))
+	fmt.Println("dsr, args", hexutil.BytesToHex(args))
+	fmt.Println("dsr, resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

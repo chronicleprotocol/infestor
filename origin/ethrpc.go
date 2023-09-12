@@ -130,7 +130,7 @@ func (b EthRPC) buildNetVersion(e ExchangeMock) (*smocker.Mock, error) {
 func (b EthRPC) buildSymbols(e ExchangeMock) (*smocker.Mock, error) {
 	blockNumber, ok := e.Custom["blockNumber"].(int) // Should use same block number with EthRPC exchange
 	if !ok {
-		return nil, fmt.Errorf("not added ethrpc exchange")
+		return nil, fmt.Errorf("not found block number")
 	}
 	tokens, err := e.Custom["tokens"].([]types.Address)
 	if !err {
@@ -173,8 +173,8 @@ func (b EthRPC) buildSymbols(e ExchangeMock) (*smocker.Mock, error) {
 	args, _ := encodeMultiCallArgs(calls)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
-	fmt.Println("args", hexutil.BytesToHex(args))
-	fmt.Println("resp", hexutil.BytesToHex(resp))
+	fmt.Println("symbols, args", hexutil.BytesToHex(args))
+	fmt.Println("symbols, resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

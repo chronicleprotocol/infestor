@@ -44,9 +44,9 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 	// cast sig "getLatest(uint8)(uint256)" == 0xb10be739
 	blockNumber, ok := e.Custom["blockNumber"].(int) // Should use same block number with EthRPC exchange
 	if !ok {
-		return nil, fmt.Errorf("not added ethrpc exchange")
+		return nil, fmt.Errorf("not found block number")
 	}
-	pool, ok := e.Custom["pool"].(types.Address)
+	pool, ok := e.Custom[e.Symbol.String()].(types.Address)
 	if !ok {
 		return nil, fmt.Errorf("not found pool address")
 	}
@@ -95,7 +95,7 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
 	// cast sig "getPriceRateCache(address)(uint256,uint256,uint256)" == 0xb867ee5a
 	//                                     rate uint256, duration uint256, expires uint256
-	pool, err := e.Custom["pool"].(types.Address)
+	pool, err := e.Custom[e.Symbol.String()].(types.Address)
 	if !err {
 		return nil, fmt.Errorf("not found pool address")
 	}
