@@ -5,11 +5,12 @@ package origin
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-	"math/big"
 )
 
 type BalancerV2 struct {
@@ -84,7 +85,7 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }
@@ -137,7 +138,7 @@ func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }

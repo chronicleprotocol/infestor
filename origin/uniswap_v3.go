@@ -2,11 +2,12 @@ package origin
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-	"math/big"
 )
 
 type UniswapV3 struct {
@@ -93,7 +94,7 @@ func (b UniswapV3) buildSlot0(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }
@@ -153,7 +154,7 @@ func (b UniswapV3) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }

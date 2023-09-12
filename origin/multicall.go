@@ -1,9 +1,10 @@
 package origin
 
 import (
+	"math/big"
+
 	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/types"
-	"math/big"
 )
 
 var multicallMethod = abi.MustParseMethod(`
@@ -29,6 +30,6 @@ func encodeMultiCallArgs(calls []MultiCall) ([]byte, error) {
 }
 
 func encodeMultiCallResponse(blockNumber int64, data []any) ([]byte, error) {
-	respEncoded := abi.MustEncodeValues(multicallMethod.Outputs(), big.NewInt(blockNumber).Uint64(), data)
-	return respEncoded, nil
+	respEncoded, err := abi.EncodeValues(multicallMethod.Outputs(), big.NewInt(blockNumber).Uint64(), data)
+	return respEncoded, err
 }

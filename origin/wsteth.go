@@ -5,9 +5,10 @@ package origin
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-	"math/big"
 
 	"github.com/chronicleprotocol/infestor/smocker"
 )
@@ -76,7 +77,7 @@ func (b WSTETH) buildSTEthPerToken(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }

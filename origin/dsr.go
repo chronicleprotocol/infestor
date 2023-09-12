@@ -2,10 +2,11 @@ package origin
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-	"math/big"
 )
 
 type DSR struct {
@@ -72,7 +73,7 @@ func (b DSR) buildDSR(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }

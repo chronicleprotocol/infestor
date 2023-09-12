@@ -4,27 +4,28 @@ package origin
 
 import (
 	"fmt"
+	"math/big"
+	"strconv"
+
 	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-	"math/big"
-	"strconv"
 )
 
-const RpcJSONResult = `{
+const RPCJSONResult = `{
   "jsonrpc": "2.0",
   "id": 1,
   "result": "%s"
 }`
 
-const RpcCallRequestJSON = `{"method":"eth_call","params":[{"from":"%s","to":"%s","data":"%s"},"%s"],"id":1,"jsonrpc":"2.0"}`
+const RPCCallRequestJSON = `{"method":"eth_call","params":[{"from":"%s","to":"%s","data":"%s"},"%s"],"id":1,"jsonrpc":"2.0"}` //nolint:lll
 
 type EthRPC struct{}
 
 func (b EthRPC) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
-	m, err := CombineMocks(e, b.buildChainId)
+	m, err := CombineMocks(e, b.buildChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func (b EthRPC) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b EthRPC) buildChainId(e ExchangeMock) (*smocker.Mock, error) {
+func (b EthRPC) buildChainID(e ExchangeMock) (*smocker.Mock, error) {
 	m := smocker.ShouldContainSubstring("eth_chainId")
 
 	return &smocker.Mock{
@@ -190,7 +191,7 @@ func (b EthRPC) buildSymbols(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(RpcJSONResult, hexutil.BytesToHex(resp)),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }

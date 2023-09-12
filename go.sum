@@ -12,10 +12,14 @@ github.com/defiweb/go-anymapper v0.3.0 h1:sWbTvhpdBaCHQGn+kuKYDnb+mPmeDNzzEXnC+C
 github.com/defiweb/go-anymapper v0.3.0/go.mod h1:EeQDyOsFd63Pt2uu9Yb8NFrChuZ9JBChjGKbDhRPHAQ=
 github.com/defiweb/go-eth v0.4.1 h1:QseDaYk2kCHECnUwyL/tRmb61liMD94yAOyr7nTcB2w=
 github.com/defiweb/go-eth v0.4.1/go.mod h1:bLmA9IvQIq+dQ4edROu19d0Ve7lCihTCe9+tZIONqrc=
+github.com/defiweb/go-eth v0.4.3 h1:I1Wcj09C1FiExyE9vKSHjFLwxFdsD9n1R2nfs+5EKUg=
+github.com/defiweb/go-eth v0.4.3/go.mod h1:b1O58iI9/RLA2tabu+9+F0NiItKYbE4/N44tvnmkq+U=
 github.com/defiweb/go-rlp v0.3.0 h1:0q+EuR5SdSDu7XLx5Cu68EwVSaNA+CkRCFcE+17HNxA=
 github.com/defiweb/go-rlp v0.3.0/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
 github.com/defiweb/go-sigparser v0.3.0 h1:kWp9D5EGSrXFj3FBPBFPiyUfqf1KazJHGMJeSGoLgDQ=
 github.com/defiweb/go-sigparser v0.3.0/go.mod h1:R1wkfsnASR2M38ZupKHoqqIfv+8HgRbZaFQI9Inr4k8=
+github.com/defiweb/go-sigparser v0.4.0 h1:ptnckqnzAj58s7zAWg4GE/wnKXAL2eXNHCLfhdOI6Zw=
+github.com/defiweb/go-sigparser v0.4.0/go.mod h1:R1wkfsnASR2M38ZupKHoqqIfv+8HgRbZaFQI9Inr4k8=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
@@ -26,8 +30,12 @@ github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcU
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 golang.org/x/crypto v0.12.0 h1:tFM/ta59kqch6LlvYnPa0yx5a83cL2nHflFhYKvv9Yk=
 golang.org/x/crypto v0.12.0/go.mod h1:NF0Gs7EO5K4qLn+Ylc+fih8BSTeIjAP05siRnAh98yw=
+golang.org/x/crypto v0.13.0 h1:mvySKfSWJ+UKUii46M40LOvyWfN0s2U+46/jDd0e6Ck=
+golang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliYc=
 golang.org/x/sys v0.11.0 h1:eG7RXZHdqOJ1i+0lgLgCpSXAp6M3LYlAo6osgSi0xOM=
 golang.org/x/sys v0.11.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.12.0 h1:CM0HF96J0hcLAwsHPJZjfdNzs0gftsLfgKt57wWHJ0o=
+golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=

@@ -65,7 +65,7 @@ func (mb *MocksBuilder) Deploy(api smocker.API) error {
 		return fmt.Errorf("failed to build mocks body: %w", err)
 	}
 	if mb.debug {
-		err := os.WriteFile("./mocks.json", body, 0644) // nolint:gosec,gomnd
+		err := os.WriteFile("./mocks.json", body, 0644) //nolint:gosec,gomnd
 		if err != nil {
 			return fmt.Errorf("failed to write debug mocks.yaml: %w", err)
 		}
