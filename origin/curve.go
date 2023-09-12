@@ -68,9 +68,6 @@ func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
 	args, _ := encodeMultiCallArgs(calls)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
-	fmt.Println("coins, args", hexutil.BytesToHex(args))
-	fmt.Println("coins, resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
@@ -117,9 +114,6 @@ func (b Curve) buildGetDy(e ExchangeMock) (*smocker.Mock, error) {
 	args, _ := encodeMultiCallArgs(calls)
 	price := funcData[0].Return[0].(*big.Int)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(price.Bytes()).PadLeft(32)})
-
-	fmt.Println("get_dy, args", hexutil.BytesToHex(args))
-	fmt.Println("get_dy, resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

@@ -76,9 +76,6 @@ func (b UniswapV3) buildSlot0(e ExchangeMock) (*smocker.Mock, error) {
 		unlocked)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{slot0Bytes})
 
-	fmt.Println("slot0, args", hexutil.BytesToHex(args))
-	fmt.Println("slot0, resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
@@ -138,9 +135,6 @@ func (b UniswapV3) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
 		types.Bytes(token0.Bytes()).PadLeft(32),
 		types.Bytes(token1.Bytes()).PadLeft(32),
 	})
-
-	fmt.Println("tokens, args", hexutil.BytesToHex(args))
-	fmt.Println("tokens, resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

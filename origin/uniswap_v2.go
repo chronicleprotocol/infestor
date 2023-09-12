@@ -65,9 +65,6 @@ func (b UniswapV2) buildGetReserves(e ExchangeMock) (*smocker.Mock, error) {
 	resp, _ := encodeMultiCallResponse(int64(blockNumber),
 		[]any{abi.MustEncodeValues(getReserves.Outputs(), reserve0, reserve1, blockTimestamp)})
 
-	fmt.Println("getReserves, args", hexutil.BytesToHex(args))
-	fmt.Println("getReserves, resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
@@ -127,9 +124,6 @@ func (b UniswapV2) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
 		types.Bytes(token0.Bytes()).PadLeft(32),
 		types.Bytes(token1.Bytes()).PadLeft(32),
 	})
-
-	fmt.Println("tokens, args", hexutil.BytesToHex(args))
-	fmt.Println("tokens, resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

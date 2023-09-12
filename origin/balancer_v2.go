@@ -67,9 +67,6 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 	price := funcData[0].Return[0].(*big.Int)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(price.Bytes()).PadLeft(32)})
 
-	fmt.Println("args", hexutil.BytesToHex(args))
-	fmt.Println("resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
@@ -122,9 +119,6 @@ func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error
 			types.Bytes(duration.Bytes()).PadLeft(32), // duration
 			types.Bytes(expires.Bytes()).PadLeft(32),  // expires
 		)})
-
-	fmt.Println("args", hexutil.BytesToHex(args))
-	fmt.Println("resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

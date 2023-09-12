@@ -56,9 +56,6 @@ func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) 
 	rate := funcData[0].Return[0].(*big.Int)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(rate.Bytes()).PadLeft(32)})
 
-	fmt.Println("getExchangeRate, args", hexutil.BytesToHex(args))
-	fmt.Println("getExchangeRate, resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{

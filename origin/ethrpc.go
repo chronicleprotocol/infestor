@@ -173,9 +173,6 @@ func (b EthRPC) buildSymbols(e ExchangeMock) (*smocker.Mock, error) {
 	args, _ := encodeMultiCallArgs(calls)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
-	fmt.Println("symbols, args", hexutil.BytesToHex(args))
-	fmt.Println("symbols, resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{

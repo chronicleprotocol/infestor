@@ -59,9 +59,6 @@ func (b WSTETH) buildSTEthPerToken(e ExchangeMock) (*smocker.Mock, error) {
 	rate := funcData[0].Return[0].(*big.Int)
 	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(rate.Bytes()).PadLeft(32)})
 
-	fmt.Println("stEthPerToken, args", hexutil.BytesToHex(args))
-	fmt.Println("stEthPerToken, resp", hexutil.BytesToHex(resp))
-
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
