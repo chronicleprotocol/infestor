@@ -25,7 +25,9 @@ func CombineMocks(e []ExchangeMock, f MockableFunc) ([]*smocker.Mock, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mock: %w", err)
 		}
-		mocks = append(mocks, m)
+		if m != nil {
+			mocks = append(mocks, m)
+		}
 	}
 	return mocks, nil
 }
@@ -38,6 +40,7 @@ var exchanges = map[string]Mockable{
 	"coinbase":   Coinbase{},
 	"curve":      Curve{},
 	"dsr":        DSR{},
+	"ethrpc":     EthRPC{},
 	"gemini":     Gemini{},
 	"hitbtc":     HitBTC{},
 	"huobi":      Huobi{},
@@ -77,6 +80,11 @@ func (p Symbol) Format(format string) string {
 	return fmt.Sprintf(format, p.Base, p.Quote)
 }
 
+type FunctionData struct {
+	Args   []any
+	Return []any
+}
+
 type ExchangeMock struct {
 	Name       string
 	StatusCode int
@@ -86,7 +94,7 @@ type ExchangeMock struct {
 	Ask        float64
 	Bid        float64
 	Timestamp  time.Time
-	Custom     map[string]string
+	Custom     map[string]any
 }
 
 func NewExchange(name string) *ExchangeMock {
@@ -94,7 +102,7 @@ func NewExchange(name string) *ExchangeMock {
 		StatusCode: http.StatusOK,
 		Name:       name,
 		Timestamp:  time.Now(),
-		Custom:     make(map[string]string),
+		Custom:     make(map[string]any),
 	}
 }
 
@@ -133,9 +141,21 @@ func (e *ExchangeMock) WithTime(timestamp time.Time) *ExchangeMock {
 	return e
 }
 
-func (e *ExchangeMock) WithCustom(key, value string) *ExchangeMock {
+func (e *ExchangeMock) WithCustom(key string, value any) *ExchangeMock {
 	e.Custom[key] = value
 	return e
+}
+
+func (e *ExchangeMock) WithFunctionData(funcName string, funcData []FunctionData) *ExchangeMock {
+	e.Custom[funcName] = funcData
+	return e
+}
+
+func (e *ExchangeMock) GetFunctionData(funcName string) ([]FunctionData, error) {
+	if s, ok := e.Custom[funcName].([]FunctionData); ok {
+		return s, nil
+	}
+	return nil, fmt.Errorf("not found the function: %s", funcName)
 }
 
 func BuildMocksForExchanges(exchangeName string, e []ExchangeMock) ([]*smocker.Mock, error) {

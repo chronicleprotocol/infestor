@@ -11,12 +11,6 @@ import (
 
 type WSTETH struct{}
 
-const rpcJSONResult = `{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": "%s"
-}`
-
 func (b WSTETH) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
 	m, err := CombineMocks(e, b.buildTokensPerStEth)
@@ -53,7 +47,7 @@ func (b WSTETH) buildTokensPerStEth(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000cf6c97c561e07bc"),
+			Body: fmt.Sprintf(RpcJSONResult, "0x0000000000000000000000000000000000000000000000000cf6c97c561e07bc"),
 		},
 	}, nil
 }
@@ -77,7 +71,7 @@ func (b WSTETH) buildstEthPerToken(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000edb20f642b06506"),
+			Body: fmt.Sprintf(RpcJSONResult, "0x0000000000000000000000000000000000000000000000000edb20f642b06506"),
 		},
 	}, nil
 }

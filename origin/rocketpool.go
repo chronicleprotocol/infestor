@@ -40,7 +40,7 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) {
 	price := "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"
 	if e.Custom["price"] != "" {
-		price = e.Custom["price"]
+		price = e.Custom["price"].(string)
 	}
 	// getExchangeRate
 	m := smocker.ShouldContainSubstring("0xe6aa216c")
@@ -60,7 +60,7 @@ func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) 
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, price),
+			Body: fmt.Sprintf(RpcJSONResult, price),
 		},
 	}, nil
 }
@@ -84,7 +84,7 @@ func (b RocketPool) buildGetRethValue(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"),
+			Body: fmt.Sprintf(RpcJSONResult, "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"),
 		},
 	}, nil
 }
@@ -109,7 +109,7 @@ func (b RocketPool) buildGetCircuitBreakerValue(e ExchangeMock) (*smocker.Mock, 
 				},
 			},
 			// Set to 10%
-			Body: fmt.Sprintf(rpcJSONResult, "0x0000000000000000000000000000000000000000000000000000000000002710"),
+			Body: fmt.Sprintf(RpcJSONResult, "0x0000000000000000000000000000000000000000000000000000000000002710"),
 		},
 	}, nil
 }
@@ -134,7 +134,7 @@ func (b RocketPool) buildGetCircuitBreakerDivisor(e ExchangeMock) (*smocker.Mock
 				},
 			},
 			// 10^5
-			Body: fmt.Sprintf(rpcJSONResult, "0x00000000000000000000000000000000000000000000000000000000000186a0"),
+			Body: fmt.Sprintf(RpcJSONResult, "0x00000000000000000000000000000000000000000000000000000000000186a0"),
 		},
 	}, nil
 }
