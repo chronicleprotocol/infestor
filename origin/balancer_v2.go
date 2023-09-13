@@ -32,7 +32,7 @@ func (b BalancerV2) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	}
 	mocks = append(mocks, m...)
 
-	m, err = CombineMocks(e, b.buildGetPriceRateCache)
+	m, err = CombineMocks(e, b.buildWithGetPriceRateCache)
 	if err != nil {
 		return nil, err
 	}
@@ -90,36 +90,44 @@ func (b BalancerV2) buildGetLatest(e ExchangeMock) (*smocker.Mock, error) {
 	}, nil
 }
 
-func (b BalancerV2) buildGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
+func (b BalancerV2) buildWithGetPriceRateCache(e ExchangeMock) (*smocker.Mock, error) {
 	// cast sig "getPriceRateCache(address)(uint256,uint256,uint256)" == 0xb867ee5a
 	//                                     rate uint256, duration uint256, expires uint256
 	pool, err := e.Custom[e.Symbol.String()].(types.Address)
 	if !err {
 		return nil, fmt.Errorf("not found pool address")
 	}
-	funcData, ok := e.Custom["getPriceRateCache"].([]FunctionData)
-	if !ok || len(funcData) < 1 {
+	getLatestFuncData, ok := e.Custom["getLatest"].([]FunctionData)
+	if !ok || len(getLatestFuncData) < 1 {
+		return nil, fmt.Errorf("not found function data for getLatest")
+	}
+	getPriceRateCacheFuncData, ok := e.Custom["getPriceRateCache"].([]FunctionData)
+	if !ok || len(getPriceRateCacheFuncData) < 1 {
 		return nil, nil
 	}
 
-	data, _ := getPriceRateCache.EncodeArgs(funcData[0].Args[0].(types.Address))
+	getLatestData, _ := getLatest.EncodeArgs(getLatestFuncData[0].Args[0].(byte))
+	getPriceRateCacheData, _ := getPriceRateCache.EncodeArgs(getPriceRateCacheFuncData[0].Args[0].(types.Address))
 
 	calls := []MultiCall{
 		{
 			Target: pool,
-			Data:   data,
+			Data:   getLatestData,
+		},
+		{
+			Target: pool,
+			Data:   getPriceRateCacheData,
 		},
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	rate := funcData[0].Return[0].(*big.Int)
-	duration := funcData[0].Return[1].(*big.Int)
-	expires := funcData[0].Return[2].(*big.Int)
-	resp, _ := encodeMultiCallResponse(100,
-		[]any{abi.MustEncodeValues(getPriceRateCache.Outputs(),
-			types.Bytes(rate.Bytes()).PadLeft(32),     // rate
-			types.Bytes(duration.Bytes()).PadLeft(32), // duration
-			types.Bytes(expires.Bytes()).PadLeft(32),  // expires
-		)})
+	price := getLatestFuncData[0].Return[0].(*big.Int)
+	rate := getPriceRateCacheFuncData[0].Return[0].(*big.Int)
+	duration := getPriceRateCacheFuncData[0].Return[1].(*big.Int)
+	expires := getPriceRateCacheFuncData[0].Return[2].(*big.Int)
+	resp, _ := encodeMultiCallResponse(100, []any{
+		types.Bytes(price.Bytes()).PadLeft(32),
+		abi.MustEncodeValues(getPriceRateCache.Outputs(), rate, duration, expires),
+	})
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

@@ -168,6 +168,60 @@ func (s *ExchangesE2ESuite) TestBalancerV2() {
 	defer func() { _ = resp.Body.Close() }()
 }
 
+func (s *ExchangesE2ESuite) TestBalancerV2WithRef() {
+	ex := origin.NewExchange("balancerV2").WithSymbol("RETH/WETH").WithPrice(1)
+	// No `pool` field should fail
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	price := big.NewInt(0.94 * 1e18)
+	ex = ex.
+		WithCustom("RETH/WETH", types.MustAddressFromHex("0x1E19CF2D73a72Ef1332C882F20534B6519Be0276")).
+		WithFunctionData("getLatest", []origin.FunctionData{
+			{
+				Args:   []any{byte(0)},
+				Return: []any{price},
+			},
+		}).
+		WithFunctionData("getPriceRateCache", []origin.FunctionData{
+			{
+				Args:   []any{types.MustAddressFromHex("0xae78736Cd615f374D3085123A210448E74Fc6393")},
+				Return: []any{big.NewInt(0.2 * 1e18), big.NewInt(0), big.NewInt(0)},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(0.94)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, getLatest, getPriceRateCache
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000001e19cf2d73a72ef1332c882f20534b6519be027600000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024b10be7390000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001e19cf2d73a72ef1332c882f20534b6519be027600000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024b867ee5a000000000000000000000000ae78736cd615f374d3085123a210448e74fc639300000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x0000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000d0b8d0508de0000000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000002c68af0bb14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
 func (s *ExchangesE2ESuite) TestBinance() {
 	ex := origin.NewExchange("binance").WithSymbol("ETH/BTC").WithPrice(1)
 
