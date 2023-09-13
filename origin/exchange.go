@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/chronicleprotocol/infestor/smocker"
+	"github.com/defiweb/go-eth/types"
 )
 
 // Mockable interface for exchange implementation.
