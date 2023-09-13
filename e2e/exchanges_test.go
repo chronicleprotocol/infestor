@@ -414,7 +414,7 @@ func (s *ExchangesE2ESuite) TestCurve() {
 			//	Address: types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 			//	Args:   []any{},
 			//	Return: []any{"ETH"},
-			//},
+			// },
 			{
 				Address: types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84"),
 				Args:    []any{},
@@ -426,7 +426,7 @@ func (s *ExchangesE2ESuite) TestCurve() {
 			//	Address: types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 			//	Args:   []any{},
 			//	Return: []any{big.NewInt(18)},
-			//},
+			// },
 			{
 				Address: types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84"),
 				Args:    []any{},
