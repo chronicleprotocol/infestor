@@ -35,7 +35,7 @@ func (c Coinbase) build(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(body, e.Price, e.Timestamp.Format(format), e.Bid, e.Ask, e.Volume),
+			Body: fmt.Sprintf(body, e.Price, e.Timestamp.UTC().Format(format), e.Bid, e.Ask, e.Volume),
 		},
 	}, nil
 }

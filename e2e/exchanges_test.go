@@ -321,7 +321,7 @@ func (s *ExchangesE2ESuite) TestCoinbase() {
 	s.Require().Equal("2.000000", response.Volume)
 	s.Require().Equal("3.000000", response.Bid)
 	s.Require().Equal("4.000000", response.Ask)
-	s.Require().Equal(ts.Format(format), response.Time)
+	s.Require().Equal(ts.UTC().Format(format), response.Time)
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
