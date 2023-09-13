@@ -78,7 +78,7 @@ func (b EthRPC) buildChainID(e ExchangeMock) (*smocker.Mock, error) {
 func (b EthRPC) buildBlockNumber(e ExchangeMock) (*smocker.Mock, error) {
 	blockNumber, err := e.Custom["blockNumber"].(int)
 	if !err {
-		return nil, fmt.Errorf("not found pool address")
+		return nil, fmt.Errorf("not found block number")
 	}
 
 	blockNumberHex := strconv.FormatInt(int64(blockNumber), 16)
@@ -133,29 +133,28 @@ func (b EthRPC) buildSymbols(e ExchangeMock) (*smocker.Mock, error) {
 	if !ok {
 		return nil, fmt.Errorf("not found block number")
 	}
-	tokens, err := e.Custom["tokens"].([]types.Address)
-	if !err {
-		return nil, nil
-	}
 	symbols, err := e.Custom["symbols"].([]FunctionData)
 	if !err {
-		return nil, fmt.Errorf("not found return values for symbols")
+		return nil, nil
 	}
 	decimals, err := e.Custom["decimals"].([]FunctionData)
 	if !err {
 		return nil, fmt.Errorf("not found return values for decimals")
 	}
+	if len(symbols) != len(decimals) {
+		return nil, fmt.Errorf("not match function data for symbol and decimals")
+	}
 
 	var calls []MultiCall
-	for _, token := range tokens {
+	for i := 0; i < len(symbols); i++ {
 		symbolArg, _ := getSymbol.EncodeArgs()
 		decimalArgs, _ := getDecimals.EncodeArgs()
 
 		calls = append(calls, MultiCall{
-			Target: token,
+			Target: symbols[i].Address,
 			Data:   symbolArg,
 		}, MultiCall{
-			Target: token,
+			Target: decimals[i].Address,
 			Data:   decimalArgs,
 		})
 	}

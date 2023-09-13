@@ -67,29 +67,28 @@ func (s *ExchangesE2ESuite) TestEthRPC() {
 	const blockNumber int = 100
 	ex := origin.NewExchange("ethrpc").
 		WithCustom("blockNumber", blockNumber).
-		WithCustom("tokens",
-			[]types.Address{
-				types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
-				types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
-			}).
 		WithFunctionData("symbols", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{"stETH"},
+				Address: types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+				Args:    []any{},
+				Return:  []any{"stETH"},
 			},
 			{
-				Args:   []any{},
-				Return: []any{"WETH"},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{"WETH"},
 			},
 		}).
 		WithFunctionData("decimals", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 		})
 	err := infestor.NewMocksBuilder().Reset().Debug().Add(ex).Deploy(s.api)
@@ -129,11 +128,11 @@ func (s *ExchangesE2ESuite) TestBalancerV2() {
 	const blockNumber int = 100
 	price := big.NewInt(0.94 * 1e18)
 	ex = ex.
-		WithCustom("STETH/ETH", types.MustAddressFromHex("0x32296969ef14eb0c6d29669c550d4a0449130230")).
 		WithFunctionData("getLatest", []origin.FunctionData{
 			{
-				Args:   []any{byte(0)},
-				Return: []any{price},
+				Address: types.MustAddressFromHex("0x32296969ef14eb0c6d29669c550d4a0449130230"), // STETH/ETH
+				Args:    []any{byte(0)},
+				Return:  []any{price},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -177,17 +176,18 @@ func (s *ExchangesE2ESuite) TestBalancerV2WithRef() {
 	const blockNumber int = 100
 	price := big.NewInt(0.94 * 1e18)
 	ex = ex.
-		WithCustom("RETH/WETH", types.MustAddressFromHex("0x1E19CF2D73a72Ef1332C882F20534B6519Be0276")).
 		WithFunctionData("getLatest", []origin.FunctionData{
 			{
-				Args:   []any{byte(0)},
-				Return: []any{price},
+				Address: types.MustAddressFromHex("0x1E19CF2D73a72Ef1332C882F20534B6519Be0276"), // RETH/WETH
+				Args:    []any{byte(0)},
+				Return:  []any{price},
 			},
 		}).
 		WithFunctionData("getPriceRateCache", []origin.FunctionData{
 			{
-				Args:   []any{types.MustAddressFromHex("0xae78736Cd615f374D3085123A210448E74Fc6393")},
-				Return: []any{big.NewInt(0.2 * 1e18), big.NewInt(0), big.NewInt(0)},
+				Address: types.MustAddressFromHex("0x1E19CF2D73a72Ef1332C882F20534B6519Be0276"), // RETH/WETH
+				Args:    []any{types.MustAddressFromHex("0xae78736Cd615f374D3085123A210448E74Fc6393")},
+				Return:  []any{big.NewInt(0.2 * 1e18), big.NewInt(0), big.NewInt(0)},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -397,45 +397,47 @@ func (s *ExchangesE2ESuite) TestCurve() {
 	const blockNumber int = 100
 	price := big.NewInt(0.94 * 1e18)
 	ex = ex.
-		WithCustom("ETH/STETH", types.MustAddressFromHex("0xDC24316b9AE028F1497c275EB9192a3Ea0f67022")).
 		WithFunctionData("coins", []origin.FunctionData{
 			{
-				Args:   []any{0},
-				Return: []any{types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")},
+				Address: types.MustAddressFromHex("0xDC24316b9AE028F1497c275EB9192a3Ea0f67022"), // ETH/STETH
+				Args:    []any{0},
+				Return:  []any{types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")},
 			},
 			{
-				Args:   []any{1},
-				Return: []any{types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84")},
+				Address: types.MustAddressFromHex("0xDC24316b9AE028F1497c275EB9192a3Ea0f67022"), // ETH/STETH
+				Args:    []any{1},
+				Return:  []any{types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84")},
 			},
-		}).
-		WithCustom("tokens", []types.Address{
-			// types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"), // do not call for ETH
-			types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84"),
 		}).
 		WithFunctionData("symbols", []origin.FunctionData{
 			// { // do not call for ETH
+			//	Address: types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 			//	Args:   []any{},
 			//	Return: []any{"ETH"},
-			// },
+			//},
 			{
-				Args:   []any{},
-				Return: []any{"stETH"},
+				Address: types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84"),
+				Args:    []any{},
+				Return:  []any{"stETH"},
 			},
 		}).
 		WithFunctionData("decimals", []origin.FunctionData{
 			// { // do not call for ETH
+			//	Address: types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 			//	Args:   []any{},
 			//	Return: []any{big.NewInt(18)},
-			// },
+			//},
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 		}).
-		WithFunctionData("get_dy", []origin.FunctionData{
+		WithFunctionData("get_dy1", []origin.FunctionData{
 			{
-				Args:   []any{0, 1, big.NewInt(1e18)},
-				Return: []any{price},
+				Address: types.MustAddressFromHex("0xDC24316b9AE028F1497c275EB9192a3Ea0f67022"),
+				Args:    []any{0, 1, big.NewInt(1e18)},
+				Return:  []any{price},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -502,11 +504,11 @@ func (s *ExchangesE2ESuite) TestDSR() {
 	const blockNumber int = 100
 	rate := new(big.Int).Mul(big.NewInt(102), new(big.Int).Exp(big.NewInt(10), big.NewInt(25), nil))
 	ex = ex.
-		WithCustom("DSR/RATE", types.MustAddressFromHex("0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7")).
 		WithFunctionData("dsr", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{rate},
+				Address: types.MustAddressFromHex("0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7"), // DSR/RATE
+				Args:    []any{},
+				Return:  []any{rate},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -821,11 +823,11 @@ func (s *ExchangesE2ESuite) TestRocketPool() {
 	const blockNumber int = 100
 	rate := big.NewInt(0.94 * 1e18)
 	ex = ex.
-		WithCustom("RETH/ETH", types.MustAddressFromHex("0xae78736Cd615f374D3085123A210448E74Fc6393")).
 		WithFunctionData("getExchangeRate", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{rate},
+				Address: types.MustAddressFromHex("0xae78736Cd615f374D3085123A210448E74Fc6393"), // RETH/ETH
+				Args:    []any{},
+				Return:  []any{rate},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -868,11 +870,11 @@ func (s *ExchangesE2ESuite) TestSDAI() {
 	const blockNumber int = 100
 	rate := big.NewInt(1.02 * 1e18)
 	ex = ex.
-		WithCustom("SDAI/DAI", types.MustAddressFromHex("0x83F20F44975D03b1b09e64809B757c47f942BEeA")).
 		WithFunctionData("previewRedeem", []origin.FunctionData{
 			{
-				Args:   []any{big.NewInt(1e18)},
-				Return: []any{rate},
+				Address: types.MustAddressFromHex("0x83F20F44975D03b1b09e64809B757c47f942BEeA"), // SDAI/DAI
+				Args:    []any{big.NewInt(1e18)},
+				Return:  []any{rate},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -914,10 +916,10 @@ func (s *ExchangesE2ESuite) TestSushiswap() {
 
 	const blockNumber int = 100
 	ex = ex.
-		WithCustom("DAI/WETH", types.MustAddressFromHex("0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f")).
 		WithFunctionData("getReserves", []origin.FunctionData{
 			{
-				Args: []any{},
+				Address: types.MustAddressFromHex("0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f"), // DAI/WETH
+				Args:    []any{},
 				Return: []any{
 					new(big.Int).Mul(big.NewInt(100), big.NewInt(1e18)),
 					new(big.Int).Mul(big.NewInt(200), big.NewInt(1e18)),
@@ -927,38 +929,40 @@ func (s *ExchangesE2ESuite) TestSushiswap() {
 		}).
 		WithFunctionData("token0", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F")},
+				Address: types.MustAddressFromHex("0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f"), // DAI/WETH
+				Args:    []any{},
+				Return:  []any{types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F")},
 			},
 		}).
 		WithFunctionData("token1", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
+				Address: types.MustAddressFromHex("0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f"), // DAI/WETH
+				Args:    []any{},
+				Return:  []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
 			},
-		}).
-		WithCustom("tokens", []types.Address{
-			types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-			types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
 		}).
 		WithFunctionData("symbols", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{"DAI"},
+				Address: types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+				Args:    []any{},
+				Return:  []any{"DAI"},
 			},
 			{
-				Args:   []any{},
-				Return: []any{"WETH"},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{"WETH"},
 			},
 		}).
 		WithFunctionData("decimals", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -1024,10 +1028,10 @@ func (s *ExchangesE2ESuite) TestUniswapV2() {
 
 	const blockNumber int = 100
 	ex = ex.
-		WithCustom("STETH/WETH", types.MustAddressFromHex("0x4028DAAC072e492d34a3Afdbef0ba7e35D8b55C4")).
 		WithFunctionData("getReserves", []origin.FunctionData{
 			{
-				Args: []any{},
+				Address: types.MustAddressFromHex("0x4028DAAC072e492d34a3Afdbef0ba7e35D8b55C4"), // STETH/WETH
+				Args:    []any{},
 				Return: []any{
 					new(big.Int).Mul(big.NewInt(100), big.NewInt(1e18)),
 					new(big.Int).Mul(big.NewInt(200), big.NewInt(1e18)),
@@ -1037,38 +1041,40 @@ func (s *ExchangesE2ESuite) TestUniswapV2() {
 		}).
 		WithFunctionData("token0", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84")},
+				Address: types.MustAddressFromHex("0x4028DAAC072e492d34a3Afdbef0ba7e35D8b55C4"), // STETH/WETH
+				Args:    []any{},
+				Return:  []any{types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84")},
 			},
 		}).
 		WithFunctionData("token1", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
+				Address: types.MustAddressFromHex("0x4028DAAC072e492d34a3Afdbef0ba7e35D8b55C4"), // STETH/WETH
+				Args:    []any{},
+				Return:  []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
 			},
-		}).
-		WithCustom("tokens", []types.Address{
-			types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
-			types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
 		}).
 		WithFunctionData("symbols", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{"stETH"},
+				Address: types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+				Args:    []any{},
+				Return:  []any{"stETH"},
 			},
 			{
-				Args:   []any{},
-				Return: []any{"WETH"},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{"WETH"},
 			},
 		}).
 		WithFunctionData("decimals", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -1138,7 +1144,8 @@ func (s *ExchangesE2ESuite) TestUniswapV3() {
 		WithCustom("WSTETH/WETH", types.MustAddressFromHex("0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa")).
 		WithFunctionData("slot0", []origin.FunctionData{
 			{
-				Args: []any{},
+				Address: types.MustAddressFromHex("0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa"), // WSTETH/WETH
+				Args:    []any{},
 				Return: []any{
 					sqrtPriceX96,     // sqrtPriceX96
 					big.NewInt(1301), // tick
@@ -1152,38 +1159,40 @@ func (s *ExchangesE2ESuite) TestUniswapV3() {
 		}).
 		WithFunctionData("token0", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")},
+				Address: types.MustAddressFromHex("0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa"), // WSTETH/WETH
+				Args:    []any{},
+				Return:  []any{types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")},
 			},
 		}).
 		WithFunctionData("token1", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
+				Address: types.MustAddressFromHex("0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa"), // WSTETH/WETH
+				Args:    []any{},
+				Return:  []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
 			},
-		}).
-		WithCustom("tokens", []types.Address{
-			types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
-			types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
 		}).
 		WithFunctionData("symbols", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{"wstETH"},
+				Address: types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
+				Args:    []any{},
+				Return:  []any{"wstETH"},
 			},
 			{
-				Args:   []any{},
-				Return: []any{"WETH"},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{"WETH"},
 			},
 		}).
 		WithFunctionData("decimals", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 			{
-				Args:   []any{},
-				Return: []any{big.NewInt(18)},
+				Address: types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+				Args:    []any{},
+				Return:  []any{big.NewInt(18)},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).
@@ -1293,11 +1302,11 @@ func (s *ExchangesE2ESuite) TestWSTETH() {
 	const blockNumber int = 100
 	rate := big.NewInt(0.94 * 1e18)
 	ex = ex.
-		WithCustom("WSTETH/STETH", types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")).
 		WithFunctionData("stEthPerToken", []origin.FunctionData{
 			{
-				Args:   []any{},
-				Return: []any{rate},
+				Address: types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"), // WSTETH/STETH
+				Args:    []any{},
+				Return:  []any{rate},
 			},
 		}).
 		WithCustom("blockNumber", blockNumber).

@@ -43,28 +43,26 @@ func (b Sushiswap) buildGetReserves(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pool, err := e.Custom[e.Symbol.String()].(types.Address)
-	if !err {
-		return nil, fmt.Errorf("not found pool address")
-	}
 	funcData, ok := e.Custom["getReserves"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
 		return nil, fmt.Errorf("not found function data for getReserves")
 	}
 
-	data, _ := getReserves.EncodeArgs()
-	calls := []MultiCall{
-		{
-			Target: pool,
-			Data:   data,
-		},
+	var calls []MultiCall
+	var data []any
+	for i := 0; i < len(funcData); i++ {
+		getReservesData, _ := getReserves.EncodeArgs()
+		calls = append(calls, MultiCall{
+			Target: funcData[i].Address,
+			Data:   getReservesData,
+		})
+		reserve0 := funcData[i].Return[0].(*big.Int)
+		reserve1 := funcData[i].Return[1].(*big.Int)
+		blockTimestamp := funcData[i].Return[2].(*big.Int)
+		data = append(data, abi.MustEncodeValues(getReserves.Outputs(), reserve0, reserve1, blockTimestamp))
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	reserve0 := funcData[0].Return[0].(*big.Int)
-	reserve1 := funcData[0].Return[1].(*big.Int)
-	blockTimestamp := funcData[0].Return[2].(*big.Int)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber),
-		[]any{abi.MustEncodeValues(getReserves.Outputs(), reserve0, reserve1, blockTimestamp)})
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
@@ -93,10 +91,6 @@ func (b Sushiswap) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pool, err := e.Custom[e.Symbol.String()].(types.Address)
-	if !err {
-		return nil, fmt.Errorf("not found pool address")
-	}
 	token0FuncData, ok := e.Custom["token0"].([]FunctionData)
 	if !ok || len(token0FuncData) < 1 {
 		return nil, fmt.Errorf("not found function data for token0")
@@ -105,26 +99,29 @@ func (b Sushiswap) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
 	if !ok || len(token1FuncData) < 1 {
 		return nil, fmt.Errorf("not found function data for token1")
 	}
+	if len(token0FuncData) != len(token1FuncData) {
+		return nil, fmt.Errorf("not found function data for token0 and token1")
+	}
 
-	token0Args, _ := token0Abi.EncodeArgs()
-	token1Args, _ := token1Abi.EncodeArgs()
-	calls := []MultiCall{
-		{
-			Target: pool,
-			Data:   token0Args,
-		},
-		{
-			Target: pool,
-			Data:   token1Args,
-		},
+	token0Data, _ := token0Abi.EncodeArgs()
+	token1Data, _ := token1Abi.EncodeArgs()
+	var calls []MultiCall
+	var data []any
+	for i := 0; i < len(token0FuncData); i++ {
+		calls = append(calls, MultiCall{
+			Target: token0FuncData[i].Address,
+			Data:   token0Data,
+		}, MultiCall{
+			Target: token1FuncData[i].Address,
+			Data:   token1Data,
+		})
+		token0 := token0FuncData[i].Return[0].(types.Address)
+		token1 := token1FuncData[i].Return[0].(types.Address)
+		data = append(data, types.Bytes(token0.Bytes()).PadLeft(32),
+			types.Bytes(token1.Bytes()).PadLeft(32))
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	token0 := token0FuncData[0].Return[0].(types.Address)
-	token1 := token1FuncData[0].Return[0].(types.Address)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{
-		types.Bytes(token0.Bytes()).PadLeft(32),
-		types.Bytes(token1.Bytes()).PadLeft(32),
-	})
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

@@ -36,25 +36,24 @@ func (b DSR) buildDSR(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pot, err := e.Custom[e.Symbol.String()].(types.Address)
-	if !err {
-		return nil, fmt.Errorf("not found pot address")
-	}
 	funcData, ok := e.Custom["dsr"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
 		return nil, fmt.Errorf("not found function data for dsr")
 	}
 
-	data, _ := dsr.EncodeArgs()
-	calls := []MultiCall{
-		{
-			Target: pot,
-			Data:   data,
-		},
+	var calls []MultiCall
+	var data []any
+	for i := 0; i < len(funcData); i++ {
+		dsrData, _ := dsr.EncodeArgs()
+		calls = append(calls, MultiCall{
+			Target: funcData[i].Address,
+			Data:   dsrData,
+		})
+		rate := funcData[i].Return[0].(*big.Int)
+		data = append(data, types.Bytes(rate.Bytes()).PadLeft(32))
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	rate := funcData[0].Return[0].(*big.Int)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(rate.Bytes()).PadLeft(32)})
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

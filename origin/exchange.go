@@ -81,8 +81,9 @@ func (p Symbol) Format(format string) string {
 }
 
 type FunctionData struct {
-	Args   []any
-	Return []any
+	Address types.Address
+	Args    []any
+	Return  []any
 }
 
 type ExchangeMock struct {

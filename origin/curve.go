@@ -31,7 +31,13 @@ func (b Curve) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	}
 	mocks = append(mocks, m...)
 
-	m, err = CombineMocks(e, b.buildGetDy)
+	m, err = CombineMocks(e, b.buildGetDy1)
+	if err != nil {
+		return nil, err
+	}
+	mocks = append(mocks, m...)
+
+	m, err = CombineMocks(e, b.buildGetDy2)
 	if err != nil {
 		return nil, err
 	}
@@ -45,10 +51,6 @@ func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pool, err := e.Custom[e.Symbol.String()].(types.Address)
-	if !err {
-		return nil, fmt.Errorf("not found pool address")
-	}
 	funcData, ok := e.Custom["coins"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
 		return nil, fmt.Errorf("not found function data for coins")
@@ -60,7 +62,7 @@ func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
 		coinsArg, _ := coins.EncodeArgs(funcDataItem.Args[0].(int))
 
 		calls = append(calls, MultiCall{
-			Target: pool,
+			Target: funcDataItem.Address,
 			Data:   coinsArg,
 		})
 		data = append(data, types.Bytes(funcDataItem.Return[0].(types.Address).Bytes()).PadLeft(32))
@@ -91,30 +93,77 @@ func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
 	}, nil
 }
 
-func (b Curve) buildGetDy(e ExchangeMock) (*smocker.Mock, error) {
+func (b Curve) buildGetDy1(e ExchangeMock) (*smocker.Mock, error) {
 	blockNumber, err := e.Custom["blockNumber"].(int) // Should use same block number with EthRPC exchange
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pool, err := e.Custom[e.Symbol.String()].(types.Address)
-	if !err {
-		return nil, fmt.Errorf("not found pool address")
-	}
-	funcData, ok := e.Custom["get_dy"].([]FunctionData)
+	funcData, ok := e.Custom["get_dy1"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
-		return nil, fmt.Errorf("not found function data for getDy")
+		return nil, nil
 	}
 
-	data, _ := getDy1.EncodeArgs(funcData[0].Args[0].(int), funcData[0].Args[1].(int), funcData[0].Args[2].(*big.Int))
-	calls := []MultiCall{
-		{
-			Target: pool,
-			Data:   data,
-		},
+	var calls []MultiCall
+	var data []any
+	for i := 0; i < len(funcData); i++ {
+		getDy1Data, _ := getDy1.EncodeArgs(
+			funcData[i].Args[0].(int), funcData[i].Args[1].(int), funcData[i].Args[2].(*big.Int))
+		calls = append(calls, MultiCall{
+			Target: funcData[i].Address,
+			Data:   getDy1Data,
+		})
+		price := funcData[i].Return[0].(*big.Int)
+		data = append(data, types.Bytes(price.Bytes()).PadLeft(32))
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	price := funcData[0].Return[0].(*big.Int)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(price.Bytes()).PadLeft(32)})
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
+
+	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
+			Body: &smocker.BodyMatcher{
+				BodyString: &m,
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
+		},
+	}, nil
+}
+
+func (b Curve) buildGetDy2(e ExchangeMock) (*smocker.Mock, error) {
+	blockNumber, err := e.Custom["blockNumber"].(int) // Should use same block number with EthRPC exchange
+	if !err {
+		return nil, fmt.Errorf("not found block number")
+	}
+	funcData, ok := e.Custom["get_dy2"].([]FunctionData)
+	if !ok || len(funcData) < 1 {
+		return nil, nil
+	}
+
+	var calls []MultiCall
+	var data []any
+	for i := 0; i < len(funcData); i++ {
+		getDy2Data, _ := getDy2.EncodeArgs(
+			funcData[i].Args[0].(int), funcData[i].Args[1].(int), funcData[i].Args[2].(*big.Int))
+		calls = append(calls, MultiCall{
+			Target: funcData[i].Address,
+			Data:   getDy2Data,
+		})
+		price := funcData[i].Return[0].(*big.Int)
+		data = append(data, types.Bytes(price.Bytes()).PadLeft(32))
+	}
+	args, _ := encodeMultiCallArgs(calls)
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
