@@ -43,7 +43,7 @@ func (b Bitfinex) buildList(e ExchangeMock) (*smocker.Mock, error) {
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
 			Method: smocker.ShouldEqual("GET"),
-			Path:   smocker.ShouldEqual("/v2/tickers"),
+			Path:   smocker.ShouldEqual("/v2/tickers?symbols=ALL"),
 			QueryParams: map[string]smocker.StringMatcherSlice{
 				"symbols": []smocker.StringMatcher{
 					smocker.ShouldEqual(symbol),

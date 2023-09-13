@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/chronicleprotocol/infestor/smocker"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-
-	"github.com/chronicleprotocol/infestor/smocker"
 )
 
-type RocketPool struct {
+type DSR struct {
 	EthRPC
 }
 
-func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
+func (b DSR) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
 
 	superMocks, err := b.EthRPC.BuildMocks(e)
@@ -23,7 +22,7 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	}
 	mocks = append(mocks, superMocks...)
 
-	m, err := CombineMocks(e, b.buildGetExchangeRate)
+	m, err := CombineMocks(e, b.buildDSR)
 	if err != nil {
 		return nil, err
 	}
@@ -32,24 +31,24 @@ func (b RocketPool) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b RocketPool) buildGetExchangeRate(e ExchangeMock) (*smocker.Mock, error) {
+func (b DSR) buildDSR(e ExchangeMock) (*smocker.Mock, error) {
 	blockNumber, err := e.Custom["blockNumber"].(int)
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	pool, err := e.Custom[e.Symbol.String()].(types.Address)
+	pot, err := e.Custom[e.Symbol.String()].(types.Address)
 	if !err {
-		return nil, fmt.Errorf("not found pool address")
+		return nil, fmt.Errorf("not found pot address")
 	}
-	funcData, ok := e.Custom["getExchangeRate"].([]FunctionData)
+	funcData, ok := e.Custom["dsr"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
-		return nil, fmt.Errorf("not found function data for getExchangeRate")
+		return nil, fmt.Errorf("not found function data for dsr")
 	}
 
-	data, _ := getExchangeRate.EncodeArgs()
+	data, _ := dsr.EncodeArgs()
 	calls := []MultiCall{
 		{
-			Target: pool,
+			Target: pot,
 			Data:   data,
 		},
 	}

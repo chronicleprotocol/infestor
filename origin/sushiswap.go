@@ -1,22 +1,20 @@
 package origin
 
-// Simulate an ETHRPC node returning the price for STETH/ETH on Curve: get_dy(int128,int128,uint256)
-// https://etherscan.io/address/0xdc24316b9ae028f1497c275eb9192a3ea0f67022#code
-
 import (
 	"fmt"
 	"math/big"
 
 	"github.com/chronicleprotocol/infestor/smocker"
+	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
 )
 
-type Curve struct {
+type Sushiswap struct {
 	EthRPC
 }
 
-func (b Curve) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
+func (b Sushiswap) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
 
 	superMocks, err := b.EthRPC.BuildMocks(e)
@@ -25,13 +23,13 @@ func (b Curve) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	}
 	mocks = append(mocks, superMocks...)
 
-	m, err := CombineMocks(e, b.buildCoins)
+	m, err := CombineMocks(e, b.buildGetReserves)
 	if err != nil {
 		return nil, err
 	}
 	mocks = append(mocks, m...)
 
-	m, err = CombineMocks(e, b.buildGetDy)
+	m, err = CombineMocks(e, b.buildToken0)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +38,7 @@ func (b Curve) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	return mocks, nil
 }
 
-func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
+func (b Sushiswap) buildGetReserves(e ExchangeMock) (*smocker.Mock, error) {
 	blockNumber, err := e.Custom["blockNumber"].(int)
 	if !err {
 		return nil, fmt.Errorf("not found block number")
@@ -49,25 +47,24 @@ func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found pool address")
 	}
-	funcData, ok := e.Custom["coins"].([]FunctionData)
+	funcData, ok := e.Custom["getReserves"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
-		return nil, fmt.Errorf("not found function data for coins")
+		return nil, fmt.Errorf("not found function data for getReserves")
 	}
 
-	var calls []MultiCall
-	var data []any
-	for _, funcDataItem := range funcData {
-		coinsArg, _ := coins.EncodeArgs(funcDataItem.Args[0].(int))
-
-		calls = append(calls, MultiCall{
+	data, _ := getReserves.EncodeArgs()
+	calls := []MultiCall{
+		{
 			Target: pool,
-			Data:   coinsArg,
-		})
-		data = append(data, types.Bytes(funcDataItem.Return[0].(types.Address).Bytes()).PadLeft(32))
+			Data:   data,
+		},
 	}
-
 	args, _ := encodeMultiCallArgs(calls)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
+	reserve0 := funcData[0].Return[0].(*big.Int)
+	reserve1 := funcData[0].Return[1].(*big.Int)
+	blockTimestamp := funcData[0].Return[2].(*big.Int)
+	resp, _ := encodeMultiCallResponse(int64(blockNumber),
+		[]any{abi.MustEncodeValues(getReserves.Outputs(), reserve0, reserve1, blockTimestamp)})
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
@@ -91,8 +88,8 @@ func (b Curve) buildCoins(e ExchangeMock) (*smocker.Mock, error) {
 	}, nil
 }
 
-func (b Curve) buildGetDy(e ExchangeMock) (*smocker.Mock, error) {
-	blockNumber, err := e.Custom["blockNumber"].(int) // Should use same block number with EthRPC exchange
+func (b Sushiswap) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
+	blockNumber, err := e.Custom["blockNumber"].(int)
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
@@ -100,21 +97,34 @@ func (b Curve) buildGetDy(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found pool address")
 	}
-	funcData, ok := e.Custom["get_dy"].([]FunctionData)
-	if !ok || len(funcData) < 1 {
-		return nil, fmt.Errorf("not found function data for getDy")
+	token0FuncData, ok := e.Custom["token0"].([]FunctionData)
+	if !ok || len(token0FuncData) < 1 {
+		return nil, fmt.Errorf("not found function data for token0")
+	}
+	token1FuncData, ok := e.Custom["token1"].([]FunctionData)
+	if !ok || len(token1FuncData) < 1 {
+		return nil, fmt.Errorf("not found function data for token1")
 	}
 
-	data, _ := getDy1.EncodeArgs(funcData[0].Args[0].(int), funcData[0].Args[1].(int), funcData[0].Args[2].(*big.Int))
+	token0Args, _ := token0Abi.EncodeArgs()
+	token1Args, _ := token1Abi.EncodeArgs()
 	calls := []MultiCall{
 		{
 			Target: pool,
-			Data:   data,
+			Data:   token0Args,
+		},
+		{
+			Target: pool,
+			Data:   token1Args,
 		},
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	price := funcData[0].Return[0].(*big.Int)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(price.Bytes()).PadLeft(32)})
+	token0 := token0FuncData[0].Return[0].(types.Address)
+	token1 := token1FuncData[0].Return[0].(types.Address)
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{
+		types.Bytes(token0.Bytes()).PadLeft(32),
+		types.Bytes(token1.Bytes()).PadLeft(32),
+	})
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

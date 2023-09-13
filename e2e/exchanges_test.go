@@ -5,25 +5,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/chronicleprotocol/infestor/origin"
-
-	"github.com/chronicleprotocol/infestor"
-
+	"github.com/defiweb/go-eth/types"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/chronicleprotocol/infestor"
+	"github.com/chronicleprotocol/infestor/origin"
 	"github.com/chronicleprotocol/infestor/smocker"
 )
 
 func parseBody(resp *http.Response, r interface{}) error {
 	defer func() { _ = resp.Body.Close() }()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -63,41 +63,51 @@ func (s *ExchangesE2ESuite) SetupTest() {
 	s.Require().NoError(err)
 }
 
-func (s *ExchangesE2ESuite) TestBalancer() {
-	ex := origin.NewExchange("balancer").WithSymbol("BAL/USD").WithPrice(1)
-	// No `contract` field should fail
-	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().Error(err)
-
-	// With contract
-	contract := "0xba100000625a3754423978a60c9317c58a424e3d"
-	ex = ex.WithCustom("contract", contract)
-	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+func (s *ExchangesE2ESuite) TestEthRPC() {
+	const blockNumber int = 100
+	ex := origin.NewExchange("ethrpc").
+		WithCustom("blockNumber", blockNumber).
+		WithCustom("tokens",
+			[]types.Address{
+				types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+				types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+			}).
+		WithFunctionData("symbols", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{"stETH"},
+			},
+			{
+				Args:   []any{},
+				Return: []any{"WETH"},
+			},
+		}).
+		WithFunctionData("decimals", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+		})
+	err := infestor.NewMocksBuilder().Reset().Debug().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/subgraphs/name/balancer-labs/balancer", s.url)
-	reqJSON := `{"query":"query($id:String) { tokenPrices(where: { id: $id }) { symbol price poolLiquidity } }", "variables": { "id": "%s" } }`
-	jsonStr := []byte(fmt.Sprintf(reqJSON, contract))
+	url := fmt.Sprintf("%s/", s.url)
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000200000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe840000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe8400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
-	response := struct {
-		Data struct {
-			TokenPrices []struct {
-				Price  string `json:"price"`
-				Symbol string `json:"symbol"`
-			} `json:"tokenPrices"`
-		}
-		Price string
-	}{}
+	var response jsonrpcMessage
 	err = parseBody(resp, &response)
-
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Len(response.Data.TokenPrices, 1)
-	s.Require().Equal("1.00000000", response.Data.TokenPrices[0].Price)
-	s.Require().Equal("BAL", response.Data.TokenPrices[0].Symbol)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000005737445544800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004574554480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012")
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
@@ -110,20 +120,31 @@ func (s *ExchangesE2ESuite) TestBalancer() {
 	defer func() { _ = resp.Body.Close() }()
 }
 
-func (s *ExchangesE2ESuite) TestBalancerV2_getLatest() {
+func (s *ExchangesE2ESuite) TestBalancerV2() {
 	ex := origin.NewExchange("balancerV2").WithSymbol("STETH/ETH").WithPrice(1)
 	// No `pool` field should fail
 	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().Error(err)
 
-	// With set rate and price
-	price := "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"
-	ex = ex.WithCustom("rate", price).WithCustom("price", price)
+	const blockNumber int = 100
+	price := big.NewInt(0.94 * 1e18)
+	ex = ex.
+		WithCustom("STETH/ETH", types.MustAddressFromHex("0x32296969ef14eb0c6d29669c550d4a0449130230")).
+		WithFunctionData("getLatest", []origin.FunctionData{
+			{
+				Args:   []any{byte(0)},
+				Return: []any{price},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(0.94)
 	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
 	url := fmt.Sprintf("%s/", s.url)
-	reqJSON := `{"method":"eth_call","params":[{"from":null,"to":"0x0000000000000000000000000000000000000000","data":"0xb10be7390000000000000000000000000000000000000000000000000000000000000000"}, "latest"],"id":1,"jsonrpc":"2.0"}`
+
+	// Calling RPC url via multicall contract
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000032296969ef14eb0c6d29669c550d4a044913023000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024b10be739000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "latest")
 	jsonStr := []byte(fmt.Sprint(reqJSON))
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
@@ -133,44 +154,8 @@ func (s *ExchangesE2ESuite) TestBalancerV2_getLatest() {
 	err = parseBody(resp, &response)
 	s.Require().NoError(err)
 	s.Require().NotNil(response)
-	s.Require().Equal(price, response.Result)
-
-	// Test status code
-	ex = ex.WithStatusCode(http.StatusNotFound)
-	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
-	defer func() { _ = resp.Body.Close() }()
-}
-
-func (s *ExchangesE2ESuite) TestBalancerV2_getPriceRateCache() {
-	ex := origin.NewExchange("balancerV2").WithSymbol("STETH/ETH").WithPrice(1)
-	// No `pool` field should fail
-	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().Error(err)
-
-	// With set rate and price
-	rate := "0x0000000000000000000000000000000000000000000000000dd22d6848e229b8"
-	ex = ex.WithCustom("rate", rate).WithCustom("price", rate)
-	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	url := fmt.Sprintf("%s/", s.url)
-	reqJSON := `{"method":"eth_call","params":[{"from":null,"to":"0x0000000000000000000000000000000000000000","data":"0xb867ee5a"}, "latest"],"id":1,"jsonrpc":"2.0"}`
-	jsonStr := []byte(fmt.Sprint(reqJSON))
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
-
-	var response jsonrpcMessage
-	err = parseBody(resp, &response)
-	s.Require().NoError(err)
-	s.Require().NotNil(response)
-	fmt.Println(response.Result)
-	s.Require().Equal(rate, response.Result)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000d0b8d0508de0000")
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
@@ -254,52 +239,6 @@ func (s *ExchangesE2ESuite) TestBitfinex() {
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
-func (s *ExchangesE2ESuite) TestBithumb() {
-	ts := time.Now()
-	ex := origin.NewExchange("bitthumb").
-		WithSymbol("ETH/BTC").
-		WithPrice(1).
-		WithVolume(2).
-		WithTime(ts)
-
-	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	url := fmt.Sprintf("%s/openapi/v1/spot/ticker?symbol=ETH-BTC", s.url)
-	resp, err := http.Get(url)
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
-
-	response := struct {
-		Data []struct {
-			Vol string
-			C   string
-			S   string
-		}
-		Timestamp int64
-	}{}
-
-	err = parseBody(resp, &response)
-
-	s.Require().NoError(err)
-	s.Require().Len(response.Data, 1)
-	s.Require().Equal("ETH-BTC", response.Data[0].S)
-	s.Require().Equal("1.000000", response.Data[0].C)
-	s.Require().Equal("2.000000", response.Data[0].Vol)
-	s.Require().Equal(ts.UnixMilli(), response.Timestamp)
-
-	// Test status code
-	ex = ex.WithStatusCode(http.StatusNotFound)
-
-	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	resp, err = http.Get(url)
-	s.Require().NoError(err)
-	defer func() { _ = resp.Body.Close() }()
-	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
-}
-
 func (s *ExchangesE2ESuite) TestBitStamp() {
 	ts := time.Now()
 	ex := origin.NewExchange("bitstamp").
@@ -334,48 +273,6 @@ func (s *ExchangesE2ESuite) TestBitStamp() {
 	s.Require().Equal("3.000000", response.Bid)
 	s.Require().Equal("4.000000", response.Ask)
 	s.Require().Equal(fmt.Sprintf("%d", ts.Unix()), response.Timestamp)
-
-	// Test status code
-	ex = ex.WithStatusCode(http.StatusNotFound)
-
-	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	resp, err = http.Get(url)
-	s.Require().NoError(err)
-	defer func() { _ = resp.Body.Close() }()
-	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
-}
-
-func (s *ExchangesE2ESuite) TestBitTrex() {
-	ex := origin.NewExchange("bittrex").
-		WithSymbol("ETH/BTC").
-		WithPrice(1).
-		WithBid(2).
-		WithAsk(3)
-
-	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	url := fmt.Sprintf("%s/api/v1.1/public/getticker?market=BTC-ETH", s.url)
-	resp, err := http.Get(url)
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
-
-	response := struct {
-		Result struct {
-			Last float64
-			Bid  float64
-			Ask  float64
-		}
-	}{}
-
-	err = parseBody(resp, &response)
-
-	s.Require().NoError(err)
-	s.Require().Equal(float64(1), response.Result.Last)
-	s.Require().Equal(float64(2), response.Result.Bid)
-	s.Require().Equal(float64(3), response.Result.Ask)
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
@@ -438,135 +335,156 @@ func (s *ExchangesE2ESuite) TestCoinbase() {
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
-func (s *ExchangesE2ESuite) TestCryptoCompare() {
-	ex := origin.NewExchange("cryptocompare").
-		WithSymbol("ETH/BTC").
-		WithPrice(1)
-
+func (s *ExchangesE2ESuite) TestCurve() {
+	ex := origin.NewExchange("curve").WithSymbol("ETH/STETH").WithPrice(1)
 	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	price := big.NewInt(0.94 * 1e18)
+	ex = ex.
+		WithCustom("ETH/STETH", types.MustAddressFromHex("0xDC24316b9AE028F1497c275EB9192a3Ea0f67022")).
+		WithFunctionData("coins", []origin.FunctionData{
+			{
+				Args:   []any{0},
+				Return: []any{types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")},
+			},
+			{
+				Args:   []any{1},
+				Return: []any{types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84")},
+			},
+		}).
+		WithCustom("tokens", []types.Address{
+			// types.MustAddressFromHex("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"), // do not call for ETH
+			types.MustAddressFromHex("0xae7ab96520de3a18e5e111b5eaab095312d7fe84"),
+		}).
+		WithFunctionData("symbols", []origin.FunctionData{
+			// { // do not call for ETH
+			//	Args:   []any{},
+			//	Return: []any{"ETH"},
+			// },
+			{
+				Args:   []any{},
+				Return: []any{"stETH"},
+			},
+		}).
+		WithFunctionData("decimals", []origin.FunctionData{
+			// { // do not call for ETH
+			//	Args:   []any{},
+			//	Return: []any{big.NewInt(18)},
+			// },
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+		}).
+		WithFunctionData("get_dy", []origin.FunctionData{
+			{
+				Args:   []any{0, 1, big.NewInt(1e18)},
+				Return: []any{price},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(0.94)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/data/price?fsym=ETH&tsyms=BTC", s.url)
-	resp, err := http.Get(url)
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, coins()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000dc24316b9ae028f1497c275eb9192a3ea0f6702200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c6610657000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dc24316b9ae028f1497c275eb9192a3ea0f6702200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000024c6610657000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
-	response := map[string]float64{}
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000020000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe84")
+
+	// symbol(), decimals()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe840000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe8400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	err = parseBody(resp, &response)
-
 	s.Require().NoError(err)
-	s.Require().Len(response, 1)
-	s.Require().Equal(float64(1), response["BTC"])
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000005737445544800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012")
+
+	// get_dy()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000dc24316b9ae028f1497c275eb9192a3ea0f67022000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000645e0d443f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000d0b8d0508de0000")
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
-
 	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	resp, err = http.Get(url)
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
-	defer func() { _ = resp.Body.Close() }()
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
 }
 
-func (s *ExchangesE2ESuite) TestFtx() {
-	ex := origin.NewExchange("ftx").
-		WithSymbol("ETH/BTC").
-		WithPrice(1).
-		WithBid(2).
-		WithAsk(3).
-		WithVolume(4)
-
+func (s *ExchangesE2ESuite) TestDSR() {
+	ex := origin.NewExchange("dsr").WithSymbol("DSR/RATE").WithPrice(1)
 	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	rate := new(big.Int).Mul(big.NewInt(102), new(big.Int).Exp(big.NewInt(10), big.NewInt(25), nil))
+	ex = ex.
+		WithCustom("DSR/RATE", types.MustAddressFromHex("0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7")).
+		WithFunctionData("dsr", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{rate},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(1.02)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/api/markets/ETH/BTC", s.url)
-	resp, err := http.Get(url)
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, coins()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000197e90f9fad81970ba7976f33cbd77088e5d7cf700000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004487bf08200000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
 
-	response := struct {
-		Result struct {
-			Name          string
-			Last          float64
-			Bid           float64
-			Ask           float64
-			Price         float64
-			BaseCurrency  string
-			QuoteCurrency string
-			Volume        float64 `json:"volumeUsd24h"`
-		}
-	}{}
-
+	var response jsonrpcMessage
 	err = parseBody(resp, &response)
-
 	s.Require().NoError(err)
-	s.Require().Equal(float64(1), response.Result.Last)
-	s.Require().Equal(float64(1), response.Result.Price)
-	s.Require().Equal(float64(2), response.Result.Bid)
-	s.Require().Equal(float64(3), response.Result.Ask)
-	s.Require().Equal(float64(4), response.Result.Volume)
-	s.Require().Equal("ETH", response.Result.BaseCurrency)
-	s.Require().Equal("BTC", response.Result.QuoteCurrency)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000034bb966cbf882cd7c000000")
 
 	// Test status code
 	ex = ex.WithStatusCode(http.StatusNotFound)
-
 	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	resp, err = http.Get(url)
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
 	s.Require().NoError(err)
-	defer func() { _ = resp.Body.Close() }()
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
-}
-
-func (s *ExchangesE2ESuite) TestGateIO() {
-	ex := origin.NewExchange("gateio").
-		WithSymbol("ETH/BTC").
-		WithPrice(1).
-		WithBid(2).
-		WithAsk(3).
-		WithVolume(4)
-
-	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	url := fmt.Sprintf("%s/api/v4/spot/tickers?currency_pair=ETH_BTC", s.url)
-	resp, err := http.Get(url)
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
-
-	var response []struct {
-		Pair   string `json:"currency_pair"`
-		Last   string
-		Bid    string `json:"highest_bid"`
-		Ask    string `json:"lowest_ask"`
-		Volume string `json:"base_volume"`
-	}
-
-	err = parseBody(resp, &response)
-
-	s.Require().NoError(err)
-	s.Require().Len(response, 1)
-	s.Require().Equal("1.000000", response[0].Last)
-	s.Require().Equal("2.000000", response[0].Bid)
-	s.Require().Equal("3.000000", response[0].Ask)
-	s.Require().Equal("4.000000", response[0].Volume)
-	s.Require().Equal("ETH_BTC", response[0].Pair)
-
-	// Test status code
-	ex = ex.WithStatusCode(http.StatusNotFound)
-
-	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
-	s.Require().NoError(err)
-
-	resp, err = http.Get(url)
-	s.Require().NoError(err)
 	defer func() { _ = resp.Body.Close() }()
-	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
 func (s *ExchangesE2ESuite) TestGemini() {
@@ -794,102 +712,6 @@ func (s *ExchangesE2ESuite) TestKuCoin() {
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
-func (s *ExchangesE2ESuite) TestKyber() {
-	ts := time.Now()
-
-	err := infestor.NewMocksBuilder().
-		Debug().
-		Reset().
-		Add(origin.NewExchange("kyber").WithSymbol("ETH/BTC").WithPrice(1).WithTime(ts)).
-		Add(origin.NewExchange("kyber").WithSymbol("MKR/BTC").WithPrice(2).WithTime(ts)).
-		Deploy(s.api)
-
-	s.Require().NoError(err)
-
-	url := fmt.Sprintf("%s/change24h", s.url)
-	resp, err := http.Get(url)
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
-
-	response := map[string]struct {
-		Timestamp   int64   `json:"timestamp"`
-		TokenSymbol string  `json:"token_symbol"`
-		Price       float64 `json:"rate_eth_now"`
-	}{}
-	err = parseBody(resp, &response)
-
-	s.Require().NoError(err)
-	s.Require().NotNil(response["BTC_ETH"])
-	s.Require().Equal(ts.UnixMilli(), response["BTC_ETH"].Timestamp)
-	s.Require().Equal("ETH", response["BTC_ETH"].TokenSymbol)
-	s.Require().Equal(float64(1), response["BTC_ETH"].Price)
-	s.Require().NotNil(response["BTC_MKR"])
-	s.Require().Equal(ts.UnixMilli(), response["BTC_MKR"].Timestamp)
-	s.Require().Equal("MKR", response["BTC_MKR"].TokenSymbol)
-	s.Require().Equal(float64(2), response["BTC_MKR"].Price)
-
-	// Test status code
-	err = infestor.NewMocksBuilder().
-		Debug().
-		Reset().
-		Add(origin.NewExchange("kyber").WithSymbol("ETH/BTC").WithStatusCode(http.StatusNotFound)).
-		Deploy(s.api)
-
-	s.Require().NoError(err)
-
-	resp, err = http.Get(url)
-	s.Require().NoError(err)
-	defer func() { _ = resp.Body.Close() }()
-	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
-}
-
-func (s *ExchangesE2ESuite) TestPoloniex() {
-	err := infestor.NewMocksBuilder().
-		Reset().
-		Add(origin.NewExchange("poloniex").WithSymbol("ETH/BTC").WithPrice(1).WithAsk(2).WithBid(3).WithVolume(4)).
-		Add(origin.NewExchange("poloniex").WithSymbol("MKR/BTC").WithPrice(5).WithAsk(6).WithBid(7).WithVolume(8)).
-		Deploy(s.api)
-
-	s.Require().NoError(err)
-
-	url := fmt.Sprintf("%s/public?command=returnTicker", s.url)
-	resp, err := http.Get(url)
-	s.Require().NoError(err)
-	s.Require().Equal(http.StatusOK, resp.StatusCode)
-
-	response := map[string]struct {
-		Last       string
-		LowestAsk  string `json:"lowestAsk"`
-		HighestBid string `json:"highestBid"`
-		BaseVolume string `json:"baseVolume"`
-	}{}
-	err = parseBody(resp, &response)
-
-	s.Require().NoError(err)
-	s.Require().NotNil(response["BTC_ETH"])
-	s.Require().Equal("1.00000000", response["BTC_ETH"].Last)
-	s.Require().Equal("2.00000000", response["BTC_ETH"].LowestAsk)
-	s.Require().Equal("3.00000000", response["BTC_ETH"].HighestBid)
-	s.Require().Equal("4.00000000", response["BTC_ETH"].BaseVolume)
-	s.Require().NotNil(response["BTC_MKR"])
-	s.Require().Equal("5.00000000", response["BTC_MKR"].Last)
-	s.Require().Equal("6.00000000", response["BTC_MKR"].LowestAsk)
-	s.Require().Equal("7.00000000", response["BTC_MKR"].HighestBid)
-	s.Require().Equal("8.00000000", response["BTC_MKR"].BaseVolume)
-
-	// Test status code
-	err = infestor.NewMocksBuilder().
-		Reset().
-		Add(origin.NewExchange("poloniex").WithSymbol("ETH/BTC").WithStatusCode(http.StatusConflict)).
-		Deploy(s.api)
-	s.Require().NoError(err)
-
-	resp, err = http.Get(url)
-	s.Require().NoError(err)
-	defer func() { _ = resp.Body.Close() }()
-	s.Require().Equal(http.StatusConflict, resp.StatusCode)
-}
-
 func (s *ExchangesE2ESuite) TestOkex() {
 	ts := time.Now()
 	ex := origin.NewExchange("okex").
@@ -937,6 +759,435 @@ func (s *ExchangesE2ESuite) TestOkex() {
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
+func (s *ExchangesE2ESuite) TestRocketPool() {
+	ex := origin.NewExchange("rocketpool").WithSymbol("RETH/ETH").WithPrice(1)
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	rate := big.NewInt(0.94 * 1e18)
+	ex = ex.
+		WithCustom("RETH/ETH", types.MustAddressFromHex("0xae78736Cd615f374D3085123A210448E74Fc6393")).
+		WithFunctionData("getExchangeRate", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{rate},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(0.94)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, coins()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000ae78736cd615f374d3085123a210448e74fc639300000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004e6aa216c00000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000d0b8d0508de0000")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
+func (s *ExchangesE2ESuite) TestSDAI() {
+	ex := origin.NewExchange("sdai").WithSymbol("SDAI/DAI").WithPrice(1)
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	rate := big.NewInt(1.02 * 1e18)
+	ex = ex.
+		WithCustom("SDAI/DAI", types.MustAddressFromHex("0x83F20F44975D03b1b09e64809B757c47f942BEeA")).
+		WithFunctionData("previewRedeem", []origin.FunctionData{
+			{
+				Args:   []any{big.NewInt(1e18)},
+				Return: []any{rate},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(1.02)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, coins()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000083f20f44975d03b1b09e64809b757c47f942beea000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000244cdad5060000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000e27c49886e60000")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
+func (s *ExchangesE2ESuite) TestSushiswap() {
+	ex := origin.NewExchange("sushiswap").WithSymbol("DAI/WETH").WithPrice(1)
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	ex = ex.
+		WithCustom("DAI/WETH", types.MustAddressFromHex("0xC3D03e4F041Fd4cD388c549Ee2A29a9E5075882f")).
+		WithFunctionData("getReserves", []origin.FunctionData{
+			{
+				Args: []any{},
+				Return: []any{
+					new(big.Int).Mul(big.NewInt(100), big.NewInt(1e18)),
+					new(big.Int).Mul(big.NewInt(200), big.NewInt(1e18)),
+					big.NewInt(1692188531),
+				},
+			},
+		}).
+		WithFunctionData("token0", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F")},
+			},
+		}).
+		WithFunctionData("token1", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
+			},
+		}).
+		WithCustom("tokens", []types.Address{
+			types.MustAddressFromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+			types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+		}).
+		WithFunctionData("symbols", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{"DAI"},
+			},
+			{
+				Args:   []any{},
+				Return: []any{"WETH"},
+			},
+		}).
+		WithFunctionData("decimals", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(2)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, getReserves()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000c3d03e4f041fd4cd388c549ee2a29a9e5075882f000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000040902f1ac00000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000056bc75e2d6310000000000000000000000000000000000000000000000000000ad78ebc5ac62000000000000000000000000000000000000000000000000000000000000064dcbf73")
+
+	// token0(), token1()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000c3d03e4f041fd4cd388c549ee2a29a9e5075882f000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000040dfe168100000000000000000000000000000000000000000000000000000000000000000000000000000000c3d03e4f041fd4cd388c549ee2a29a9e5075882f00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004d21220a700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x0000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000200000000000000000000000006b175474e89094c44da98b954eedeac495271d0f0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
+
+	// symbol(), decimals()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba420000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000002000000000000000000000000006b175474e89094c44da98b954eedeac495271d0f0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b41000000000000000000000000000000000000000000000000000000000000000000000000000000006b175474e89094c44da98b954eedeac495271d0f00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003444149000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004574554480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
+func (s *ExchangesE2ESuite) TestUniswapV2() {
+	ex := origin.NewExchange("uniswapV2").WithSymbol("STETH/WETH").WithPrice(1)
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	ex = ex.
+		WithCustom("STETH/WETH", types.MustAddressFromHex("0x4028DAAC072e492d34a3Afdbef0ba7e35D8b55C4")).
+		WithFunctionData("getReserves", []origin.FunctionData{
+			{
+				Args: []any{},
+				Return: []any{
+					new(big.Int).Mul(big.NewInt(100), big.NewInt(1e18)),
+					new(big.Int).Mul(big.NewInt(200), big.NewInt(1e18)),
+					big.NewInt(1692188531),
+				},
+			},
+		}).
+		WithFunctionData("token0", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84")},
+			},
+		}).
+		WithFunctionData("token1", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
+			},
+		}).
+		WithCustom("tokens", []types.Address{
+			types.MustAddressFromHex("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"),
+			types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+		}).
+		WithFunctionData("symbols", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{"stETH"},
+			},
+			{
+				Args:   []any{},
+				Return: []any{"WETH"},
+			},
+		}).
+		WithFunctionData("decimals", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(2)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, getReserves()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba420000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000004028daac072e492d34a3afdbef0ba7e35d8b55c4000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000040902f1ac00000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000056bc75e2d6310000000000000000000000000000000000000000000000000000ad78ebc5ac62000000000000000000000000000000000000000000000000000000000000064dcbf73")
+
+	// token0(), token1()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000004028daac072e492d34a3afdbef0ba7e35d8b55c4000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000040dfe1681000000000000000000000000000000000000000000000000000000000000000000000000000000004028daac072e492d34a3afdbef0ba7e35d8b55c400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004d21220a700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000020000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe840000000000000000000000000000000000000000000000000000000000000020000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
+
+	// symbol(), decimals()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000200000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe840000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe8400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000005737445544800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004574554480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
+func (s *ExchangesE2ESuite) TestUniswapV3() {
+	ex := origin.NewExchange("uniswapV3").WithSymbol("WSTETH/WETH").WithPrice(1)
+	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	sqrtPriceX96, _ := new(big.Int).SetString("84554395222218770838379633172", 10)
+	ex = ex.
+		WithCustom("WSTETH/WETH", types.MustAddressFromHex("0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa")).
+		WithFunctionData("slot0", []origin.FunctionData{
+			{
+				Args: []any{},
+				Return: []any{
+					sqrtPriceX96,     // sqrtPriceX96
+					big.NewInt(1301), // tick
+					big.NewInt(23),   // observationIndex
+					big.NewInt(150),  // observationCardinality
+					big.NewInt(150),  // observationCardinalityNext
+					0,                // feeProtocol
+					false,            // unlocked
+				},
+			},
+		}).
+		WithFunctionData("token0", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")},
+			},
+		}).
+		WithFunctionData("token1", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")},
+			},
+		}).
+		WithCustom("tokens", []types.Address{
+			types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"),
+			types.MustAddressFromHex("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+		}).
+		WithFunctionData("symbols", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{"wstETH"},
+			},
+			{
+				Args:   []any{},
+				Return: []any{"WETH"},
+			},
+		}).
+		WithFunctionData("decimals", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+			{
+				Args:   []any{},
+				Return: []any{big.NewInt(18)},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(2)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, slot0()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba42000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000043850c7bd00000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000011135c1a5a808593f506d1a14000000000000000000000000000000000000000000000000000000000000051500000000000000000000000000000000000000000000000000000000000000170000000000000000000000000000000000000000000000000000000000000096000000000000000000000000000000000000000000000000000000000000009600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+
+	// token0(), token1()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba4200000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000040dfe168100000000000000000000000000000000000000000000000000000000000000000000000000000000109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004d21220a700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x0000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000200000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")
+
+	// symbol(), decimals()
+	reqJSON = fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba420000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000002000000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca00000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b41000000000000000000000000000000000000000000000000000000000000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000495d89b4100000000000000000000000000000000000000000000000000000000000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004313ce56700000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr = []byte(fmt.Sprint(reqJSON))
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	s.Require().Equal(response.Result, "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000006777374455448000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004574554480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000012")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
+}
+
 func (s *ExchangesE2ESuite) TestUpbit() {
 	ts := time.Now()
 	ex := origin.NewExchange("upbit").
@@ -980,16 +1231,49 @@ func (s *ExchangesE2ESuite) TestUpbit() {
 	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
 }
 
-func (s *ExchangesE2ESuite) TestUniswapV3() {
-	ex := origin.NewExchange("uniswap_v3").WithPrice(1)
-
+func (s *ExchangesE2ESuite) TestWSTETH() {
+	ex := origin.NewExchange("wsteth").WithSymbol("WSTETH/STETH").WithPrice(1)
 	err := infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().Error(err)
+
+	const blockNumber int = 100
+	rate := big.NewInt(0.94 * 1e18)
+	ex = ex.
+		WithCustom("WSTETH/STETH", types.MustAddressFromHex("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")).
+		WithFunctionData("stEthPerToken", []origin.FunctionData{
+			{
+				Args:   []any{},
+				Return: []any{rate},
+			},
+		}).
+		WithCustom("blockNumber", blockNumber).
+		WithPrice(0.94)
+	err = infestor.NewMocksBuilder().Debug().Reset().Add(ex).Deploy(s.api)
 	s.Require().NoError(err)
 
-	url := fmt.Sprintf("%s/subgraphs/name/uniswap/uniswap-v3", s.url)
-	jsonStr := []byte(`{"match":"0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"}`)
+	url := fmt.Sprintf("%s/", s.url)
+
+	// Calling RPC url via multicall contract, coins()
+	reqJSON := fmt.Sprintf(origin.RPCCallRequestJSON, "null", "0xeefba1e63905ef1d7acba5a8513c70307c1ce441", "0x252dba420000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004035faf8200000000000000000000000000000000000000000000000000000000", "latest")
+	jsonStr := []byte(fmt.Sprint(reqJSON))
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
-	defer func() { _ = resp.Body.Close() }()
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var response jsonrpcMessage
+	err = parseBody(resp, &response)
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+	// Multicall response should be equal to the expected one
+	s.Require().Equal(response.Result, "0x000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000d0b8d0508de0000")
+
+	// Test status code
+	ex = ex.WithStatusCode(http.StatusNotFound)
+	err = infestor.NewMocksBuilder().Reset().Add(ex).Deploy(s.api)
+	s.Require().NoError(err)
+
+	resp, err = http.Post(url, "application/json", bytes.NewBuffer(jsonStr))
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusNotFound, resp.StatusCode)
+	defer func() { _ = resp.Body.Close() }()
 }

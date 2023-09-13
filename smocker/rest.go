@@ -3,7 +3,7 @@ package smocker
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -93,7 +93,7 @@ func MakeRequest(req *http.Request) (*http.Response, error) {
 
 // BuildResponse builds the response struct.
 func BuildResponse(res *http.Response) (*Response, error) {
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	response := Response{
 		StatusCode: res.StatusCode,
 		Body:       string(body),
@@ -156,6 +156,6 @@ func (c *Client) Reset() error {
 	return nil
 }
 
-func (c *Client) AddMocks(mock []*Mock) error {
+func (c *Client) AddMocks(_ []*Mock) error {
 	return nil
 }

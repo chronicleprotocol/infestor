@@ -2,33 +2,87 @@ package origin
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/chronicleprotocol/infestor/smocker"
+	"github.com/defiweb/go-eth/abi"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/types"
 )
 
-type UniswapV3 struct{}
+type UniswapV3 struct {
+	EthRPC
+}
 
 func (b UniswapV3) BuildMocks(e []ExchangeMock) ([]*smocker.Mock, error) {
 	mocks := make([]*smocker.Mock, 0)
-	m, err := CombineMocks(e, b.buildETHUSD)
+
+	superMocks, err := b.EthRPC.BuildMocks(e)
+	if err != nil {
+		return nil, err
+	}
+	mocks = append(mocks, superMocks...)
+
+	m, err := CombineMocks(e, b.buildSlot0)
 	if err != nil {
 		return nil, err
 	}
 	mocks = append(mocks, m...)
+
+	m, err = CombineMocks(e, b.buildToken0)
+	if err != nil {
+		return nil, err
+	}
+	mocks = append(mocks, m...)
+
 	return mocks, nil
 }
 
-func (b UniswapV3) buildETHUSD(e ExchangeMock) (*smocker.Mock, error) {
-	m := smocker.ShouldContainSubstring("0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")
-	price := 1588.556212216532373794459636134139
-	if e.Price != 0 {
-		price = e.Price
+func (b UniswapV3) buildSlot0(e ExchangeMock) (*smocker.Mock, error) {
+	blockNumber, err := e.Custom["blockNumber"].(int)
+	if !err {
+		return nil, fmt.Errorf("not found block number")
 	}
+	pool, err := e.Custom[e.Symbol.String()].(types.Address)
+	if !err {
+		return nil, fmt.Errorf("not found pool address")
+	}
+	funcData, ok := e.Custom["slot0"].([]FunctionData)
+	if !ok || len(funcData) < 1 {
+		return nil, fmt.Errorf("not found function data for slot0")
+	}
+
+	data, _ := slot0.EncodeArgs()
+	calls := []MultiCall{
+		{
+			Target: pool,
+			Data:   data,
+		},
+	}
+	args, _ := encodeMultiCallArgs(calls)
+	sqrtPriceX96 := funcData[0].Return[0].(*big.Int)
+	tick := funcData[0].Return[1].(*big.Int)
+	observationIndex := funcData[0].Return[2].(*big.Int)
+	observationCardinality := funcData[0].Return[3].(*big.Int)
+	observationCardinalityNext := funcData[0].Return[4].(*big.Int)
+	feeProtocol := funcData[0].Return[5].(int)
+	unlocked := funcData[0].Return[6].(bool)
+	slot0Bytes := abi.MustEncodeValues(slot0.Outputs(),
+		sqrtPriceX96,
+		tick,
+		observationIndex,
+		observationCardinality,
+		observationCardinalityNext,
+		feeProtocol,
+		unlocked)
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{slot0Bytes})
+
+	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 
 	return &smocker.Mock{
 		Request: smocker.MockRequest{
 			Method: smocker.ShouldEqual("POST"),
-			Path:   smocker.ShouldEqual("/subgraphs/name/uniswap/uniswap-v3"),
+			Path:   smocker.ShouldEqual("/"),
 			Body: &smocker.BodyMatcher{
 				BodyString: &m,
 			},
@@ -40,16 +94,67 @@ func (b UniswapV3) buildETHUSD(e ExchangeMock) (*smocker.Mock, error) {
 					"application/json",
 				},
 			},
-			Body: fmt.Sprintf(`{
-  "data": {
-    "pools": [
-      {
-        "token0Price": "%f",
-        "token1Price": "0.0001111111111111111111111111111111111"
-      }
-    ]
-  }
-}`, price),
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
+		},
+	}, nil
+}
+
+func (b UniswapV3) buildToken0(e ExchangeMock) (*smocker.Mock, error) {
+	blockNumber, err := e.Custom["blockNumber"].(int)
+	if !err {
+		return nil, fmt.Errorf("not found block number")
+	}
+	pool, err := e.Custom[e.Symbol.String()].(types.Address)
+	if !err {
+		return nil, fmt.Errorf("not found pool address")
+	}
+	token0FuncData, ok := e.Custom["token0"].([]FunctionData)
+	if !ok || len(token0FuncData) < 1 {
+		return nil, fmt.Errorf("not found function data for token0")
+	}
+	token1FuncData, ok := e.Custom["token1"].([]FunctionData)
+	if !ok || len(token1FuncData) < 1 {
+		return nil, fmt.Errorf("not found function data for token1")
+	}
+
+	token0Args, _ := token0Abi.EncodeArgs()
+	token1Args, _ := token1Abi.EncodeArgs()
+	calls := []MultiCall{
+		{
+			Target: pool,
+			Data:   token0Args,
+		},
+		{
+			Target: pool,
+			Data:   token1Args,
+		},
+	}
+	args, _ := encodeMultiCallArgs(calls)
+	token0 := token0FuncData[0].Return[0].(types.Address)
+	token1 := token1FuncData[0].Return[0].(types.Address)
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{
+		types.Bytes(token0.Bytes()).PadLeft(32),
+		types.Bytes(token1.Bytes()).PadLeft(32),
+	})
+
+	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
+
+	return &smocker.Mock{
+		Request: smocker.MockRequest{
+			Method: smocker.ShouldEqual("POST"),
+			Path:   smocker.ShouldEqual("/"),
+			Body: &smocker.BodyMatcher{
+				BodyString: &m,
+			},
+		},
+		Response: &smocker.MockResponse{
+			Status: e.StatusCode,
+			Headers: map[string]smocker.StringSlice{
+				"Content-Type": []string{
+					"application/json",
+				},
+			},
+			Body: fmt.Sprintf(RPCJSONResult, hexutil.BytesToHex(resp)),
 		},
 	}, nil
 }
