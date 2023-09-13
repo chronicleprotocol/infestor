@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/chronicleprotocol/infestor/origin"
-
 	"github.com/chronicleprotocol/infestor/smocker"
 )
 

@@ -36,25 +36,27 @@ func (b SDAI) buildPreviewRedeem(e ExchangeMock) (*smocker.Mock, error) {
 	if !err {
 		return nil, fmt.Errorf("not found block number")
 	}
-	sdai, err := e.Custom[e.Symbol.String()].(types.Address)
-	if !err {
-		return nil, fmt.Errorf("not found sdai address")
-	}
 	funcData, ok := e.Custom["previewRedeem"].([]FunctionData)
 	if !ok || len(funcData) < 1 {
 		return nil, fmt.Errorf("not found function data for previewRedeem")
 	}
 
-	data, _ := previewRedeem.EncodeArgs(funcData[0].Args[0].(*big.Int))
-	calls := []MultiCall{
-		{
-			Target: sdai,
-			Data:   data,
-		},
+	var calls []MultiCall
+	var data []any
+	for i := 0; i < len(funcData); i++ {
+		previewRedeemData, _ := previewRedeem.EncodeArgs(funcData[i].Args[0].(*big.Int))
+		calls = append(calls, MultiCall{
+			Target: funcData[i].Address,
+			Data:   previewRedeemData,
+		})
+		rate := funcData[i].Return[0].(*big.Int)
+		data = append(data, types.Bytes(rate.Bytes()).PadLeft(32))
 	}
 	args, _ := encodeMultiCallArgs(calls)
-	rate := funcData[0].Return[0].(*big.Int)
-	resp, _ := encodeMultiCallResponse(int64(blockNumber), []any{types.Bytes(rate.Bytes()).PadLeft(32)})
+	resp, _ := encodeMultiCallResponse(int64(blockNumber), data)
+
+	fmt.Println("args", hexutil.BytesToHex(args))
+	fmt.Println("resp", hexutil.BytesToHex(resp))
 
 	m := smocker.ShouldContainSubstring(hexutil.BytesToHex(args))
 

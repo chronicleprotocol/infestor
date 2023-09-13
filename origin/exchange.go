@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/chronicleprotocol/infestor/smocker"
+	"github.com/defiweb/go-eth/types"
 )
 
 // Mockable interface for exchange implementation.
@@ -81,8 +82,9 @@ func (p Symbol) Format(format string) string {
 }
 
 type FunctionData struct {
-	Args   []any
-	Return []any
+	Address types.Address
+	Args    []any
+	Return  []any
 }
 
 type ExchangeMock struct {
