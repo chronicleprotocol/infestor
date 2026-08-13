@@ -12,7 +12,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.20.x]
+        go-version: [1.25.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -22,11 +22,23 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+        with:
+          # new-from-merge-base in .golangci.yml needs the base branch history
+          # to compute a diff; the default shallow clone cannot resolve it.
+          fetch-depth: 0
       - name: Linting code
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
+        # v3 of this action passes --out-format, a flag golangci-lint v2
+        # removed, so the action has to move with the linter.
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v1.53
+          version: v2.12.2
+
+          # The action drives the "new issues only" diff itself and overrides
+          # new-from-merge-base in .golangci.yml, so it has to be set here too.
+          # Without it the 65 pre-existing findings this repo has never linted
+          # would all surface on an unrelated dependency bump.
+          only-new-issues: true
 
           # Optional: working directory, useful for monorepos
           # working-directory: somedir
