@@ -1,6 +1,6 @@
 module github.com/chronicleprotocol/infestor
 
-go 1.25.0
+go 1.25.13
 
 require (
 	github.com/defiweb/go-eth v0.4.3
